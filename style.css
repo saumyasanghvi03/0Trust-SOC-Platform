@@ -1,0 +1,184 @@
+/* Zero-Trust Fintech SOC Custom Styles */
+
+/* Main container styling */
+.main {
+    background-color: #0e1117;
+}
+
+/* Header styling */
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Metric cards styling */
+[data-testid="metric-container"] {
+    background-color: #1e2130;
+    border: 1px solid #2d3043;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar styling */
+.css-1d391kg {
+    background-color: #1e2130;
+}
+
+/* Button styling */
+.stButton button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.stButton button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Alert boxes */
+.alert-high {
+    background-color: #ff4444;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 5px 0;
+}
+
+.alert-medium {
+    background-color: #ffaa00;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 5px 0;
+}
+
+.alert-low {
+    background-color: #44ff44;
+    color: black;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 5px 0;
+}
+
+/* Dataframe styling */
+.dataframe {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.dataframe thead th {
+    background-color: #667eea;
+    color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1e2130;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+    background-color: #1e2130;
+    border: 1px solid #2d3043;
+    border-radius: 5px;
+    margin: 5px 0;
+}
+
+/* Tab styling */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background-color: #1e2130;
+    border-radius: 5px 5px 0px 0px;
+    padding: 10px 20px;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: #667eea;
+}
+
+/* Input field styling */
+.stTextInput input, .stNumberInput input, .stSelectbox select {
+    background-color: #1e2130;
+    border: 1px solid #2d3043;
+    color: white;
+    border-radius: 5px;
+}
+
+/* Success/Error message styling */
+.stAlert {
+    border-radius: 10px;
+}
+
+/* Custom card animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse-alert {
+    animation: pulse 2s infinite;
+}
+
+/* Security status indicators */
+.security-status-safe {
+    color: #44ff44;
+    font-weight: bold;
+}
+
+.security-status-warning {
+    color: #ffaa00;
+    font-weight: bold;
+}
+
+.security-status-critical {
+    color: #ff4444;
+    font-weight: bold;
+    animation: pulse 1s infinite;
+}
+
+/* Risk level indicators */
+.risk-low {
+    color: #44ff44;
+}
+
+.risk-medium {
+    color: #ffaa00;
+}
+
+.risk-high {
+    color: #ff4444;
+}
+
+/* Zero-trust badge */
+.zero-trust-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: bold;
+    display: inline-block;
+    margin: 2px;
+}
