@@ -1,43 +1,35 @@
 # 0Trust-SOC-Platform
 
-**Zero-Trust Fintech Security Operations Center—Advanced Behavioral Analytics & Threat Detection Platform**
+## Copyright Notice
 
-## Usage
+© 2025 Saumya Sanghvi, All Rights Reserved.
 
-The application provides the following key modules:
+## License
 
-- **📊 Dashboard**  
-  View security alerts, high-risk activity metrics, risk trends by hour, and the latest priority incidents.
+This software is released under a copyright license that prohibits all commercial, personal, or educational use.
 
-- **🔍 Transaction Monitoring**  
-  Filter and analyze transaction logs by amount, location, and anomaly patterns.  
-  Example: View completed trades, large transactions, or suspicious external transfers.
+### Terms and Conditions
 
-- **👤 User Behavior Analytics**  
-  Inspect usage trends, suspicious logins, session statistics by device, and unusual hours of activity.
+All rights are reserved by the copyright holder. Use, modification, distribution, or reproduction of this software in any form is strictly forbidden without explicit written permission from the copyright holder.
 
-- **🚨 Threat Alerts**  
-  Respond to and manage security alerts with filtering by severity, type, and status.  
-  Example: Flag anomalous transactions or login attempts, update alert statuses.
+**Prohibited Uses:**
+- Commercial use of any kind
+- Personal use
+- Educational use
+- Modification of the source code
+- Distribution or redistribution
+- Reproduction in any form
+- Public or private deployment
+- Derivative works
 
-- **⚙️ Policy Management**  
-  Review active zero-trust rules, monitor violation analytics, and add new rules through the interface.
+**Permission Required:**
+Any use of this software requires explicit written permission from Saumya Sanghvi. To request permission, contact the copyright holder directly.
 
-- **🛡️ Data Poisoning Defense**  
-  Detect statistical anomalies and potential poisoning signals in data batches.  
-  Example: Quarantine high-outlier batches, track recommendations for improved security.
-
-All functionality is available through an interactive web dashboard—no manual setup or environment configuration is needed to use the platform once deployed.
-
-## Interactive Example (based on app.py)
-
-- Select `Dashboard` in the sidebar to view overall security metrics and recent alerts.
-- Go to `Transaction Monitoring` to analyze transactions, filter by criteria, and visualize risk.
-- Use `User Behavior Analytics` for login sessions, suspicious activity tracking, and user-level insights.
-- Access `Threat Alerts` to view, filter, and update live security events.
-- Manage zero-trust rules within `Policy Management`.
-- Run real-time checks under `Data Poisoning Defense` for deep anomaly analysis.
-
-_No installation or private environment details are included here. Please refer to public deployment instructions if you wish to run the platform online._
+**Enforcement:**
+Unauthorized use of this software will be subject to legal action under applicable copyright laws.
 
 ---
+
+**Copyright Holder:** Saumya Sanghvi  
+**Year:** 2025  
+**Status:** All Rights Reserved
