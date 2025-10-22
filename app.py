@@ -11,208 +11,195 @@ import random
 from typing import Dict, List, Any
 import warnings
 from cryptography.fernet import Fernet
+import ipaddress
+import re
 warnings.filterwarnings('ignore')
 
-# Page configuration
+# Page configuration with dark theme
 st.set_page_config(
-    page_title="Enterprise IAM Platform",
-    page_icon="🔐",
+    page_title="SOC Operations Terminal",
+    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# SOC Terminal CSS with dark theme and cyber aesthetics
 st.markdown("""
 <style>
     .main-header {
         font-size: 2.5rem;
-        color: #1f77b4;
+        color: #00ff00;
         text-align: center;
         margin-bottom: 1rem;
+        font-family: 'Courier New', monospace;
+        text-shadow: 0 0 10px #00ff00;
+    }
+    .soc-terminal {
+        background-color: #0a0a0a;
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
     }
     .metric-card {
-        background-color: #f0f2f6;
+        background-color: #1a1a1a;
         padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #1f77b4;
+        border-radius: 5px;
+        border: 1px solid #00ff00;
+        color: #00ff00;
+    }
+    .alert-critical {
+        background-color: #330000;
+        padding: 0.5rem;
+        border-radius: 3px;
+        border-left: 4px solid #ff0000;
+        color: #ff0000;
+        animation: blink 2s infinite;
     }
     .alert-high {
-        background-color: #ffe6cc;
+        background-color: #331100;
         padding: 0.5rem;
-        border-radius: 5px;
+        border-radius: 3px;
         border-left: 4px solid #ff6600;
+        color: #ff6600;
     }
     .alert-medium {
-        background-color: #ffffcc;
+        background-color: #333300;
         padding: 0.5rem;
-        border-radius: 5px;
-        border-left: 4px solid #ffcc00;
+        border-radius: 3px;
+        border-left: 4px solid #ffff00;
+        color: #ffff00;
     }
-    .ticket-card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
+    .alert-low {
+        background-color: #003300;
+        padding: 0.5rem;
+        border-radius: 3px;
+        border-left: 4px solid #00ff00;
+        color: #00ff00;
+    }
+    .incident-card {
+        border: 1px solid #444;
+        border-radius: 5px;
         padding: 1rem;
         margin: 0.5rem 0;
-        background-color: #f9f9f9;
+        background-color: #1a1a1a;
+        color: #00ff00;
     }
-    .app-card {
-        border: 1px solid #1f77b4;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        background-color: #e6f3ff;
+    .threat-indicator {
+        background-color: #002200;
+        border: 1px solid #00ff00;
+        border-radius: 3px;
+        padding: 0.5rem;
+        margin: 0.2rem 0;
     }
-    .success-flash {
-        background-color: #90EE90;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 10px 0;
+    .log-entry {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+        color: #00ff00;
+        border-bottom: 1px solid #333;
+        padding: 0.2rem 0;
+    }
+    @keyframes blink {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+    .soc-progress {
+        background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00);
+        height: 5px;
+        border-radius: 2px;
+    }
+    .terminal-text {
+        font-family: 'Courier New', monospace;
+        color: #00ff00;
     }
 </style>
 """, unsafe_allow_html=True)
 
-class EnterpriseIAMPlatform:
+class SOCOperationsTerminal:
     def __init__(self):
         self.encryption_key = Fernet.generate_key()
         self.cipher_suite = Fernet(self.encryption_key)
         self.last_update = datetime.now()
-        self.initialize_enterprise_data()
+        self.initialize_soc_data()
     
-    def initialize_enterprise_data(self):
-        """Initialize comprehensive enterprise IAM data"""
-        # Available applications
-        self.applications = {
-            "salesforce": {
-                "name": "Salesforce CRM",
-                "category": "CRM",
-                "description": "Customer relationship management platform",
-                "risk_level": "medium",
-                "requires_approval": False
-            },
-            "workday": {
-                "name": "Workday HR",
-                "category": "HR",
-                "description": "Human resources management system",
-                "risk_level": "high",
-                "requires_approval": True
-            },
-            "sap": {
-                "name": "SAP ERP",
-                "category": "ERP",
-                "description": "Enterprise resource planning",
-                "risk_level": "high",
-                "requires_approval": True
-            },
-            "servicenow": {
-                "name": "ServiceNow",
-                "category": "ITSM",
-                "description": "IT service management",
-                "risk_level": "medium",
-                "requires_approval": False
-            },
-            "slack": {
-                "name": "Slack",
-                "category": "Communication",
-                "description": "Team collaboration tool",
-                "risk_level": "low",
-                "requires_approval": False
-            },
-            "github": {
-                "name": "GitHub Enterprise",
-                "category": "Development",
-                "description": "Code repository and version control",
-                "risk_level": "medium",
-                "requires_approval": True
-            },
-            "tableau": {
-                "name": "Tableau",
-                "category": "Analytics",
-                "description": "Business intelligence and analytics",
-                "risk_level": "medium",
-                "requires_approval": False
-            },
-            "okta": {
-                "name": "Okta SSO",
-                "category": "Security",
-                "description": "Single sign-on and identity management",
-                "risk_level": "high",
-                "requires_approval": True
-            }
+    def initialize_soc_data(self):
+        """Initialize SOC operations data"""
+        # Threat intelligence feeds
+        self.threat_feeds = {
+            "malware_hashes": [
+                "a1b2c3d4e5f6789012345678901234567",
+                "f1e2d3c4b5a6987654321098765432109",
+                "5f4e3d2c1b0a98765432109876543210"
+            ],
+            "suspicious_ips": [
+                "192.168.1.100", "10.0.0.99", "172.16.0.55",
+                "203.0.113.15", "198.51.100.23"
+            ],
+            "malicious_domains": [
+                "malicious-site.com", "phishing-attack.net",
+                "bad-domain.org", "suspicious-link.io"
+            ]
         }
         
-        # Departments
-        self.departments = ["Finance", "HR", "IT", "Operations", "Sales", "Marketing", "R&D", "Legal"]
+        # SIEM rules and alerts
+        self.siem_rules = {
+            "RULE_001": {"name": "Multiple Failed Logins", "severity": "High", "category": "Authentication"},
+            "RULE_002": {"name": "Unusual After-Hours Access", "severity": "Medium", "category": "Access Control"},
+            "RULE_003": {"name": "Data Exfiltration Attempt", "severity": "Critical", "category": "Data Loss"},
+            "RULE_004": {"name": "Malware Detection", "severity": "Critical", "category": "Malware"},
+            "RULE_005": {"name": "Privilege Escalation", "severity": "High", "category": "Access Control"},
+            "RULE_006": {"name": "Suspicious Network Traffic", "severity": "Medium", "category": "Network"},
+            "RULE_007": {"name": "Ransomware Activity", "severity": "Critical", "category": "Malware"}
+        }
         
-        # Predefined users
-        self.users = {
-            "admin": {
-                "user_id": "admin",
-                "password": self.hash_password("admin123"),
-                "first_name": "System",
-                "last_name": "Administrator",
-                "email": "admin@company.com",
-                "department": "IT",
-                "role": "admin",
-                "status": "active",
-                "created_date": datetime.now() - timedelta(days=365),
-                "last_login": None,
-                "assigned_apps": list(self.applications.keys())
-            },
-            "user001": {
-                "user_id": "user001",
-                "password": self.hash_password("user123"),
-                "first_name": "John",
-                "last_name": "Smith",
-                "email": "john.smith@company.com",
-                "department": "Sales",
-                "role": "user",
-                "status": "active",
-                "created_date": datetime.now() - timedelta(days=180),
-                "last_login": None,
-                "assigned_apps": ["salesforce", "slack", "tableau"]
-            },
-            "user002": {
-                "user_id": "user002",
-                "password": self.hash_password("user123"),
+        # SOC team members
+        self.soc_team = {
+            "soc_manager": {
+                "user_id": "soc_manager",
+                "password": self.hash_password("soc123"),
                 "first_name": "Sarah",
-                "last_name": "Johnson",
-                "email": "sarah.johnson@company.com",
-                "department": "HR",
-                "role": "user",
-                "status": "active",
-                "created_date": datetime.now() - timedelta(days=150),
-                "last_login": None,
-                "assigned_apps": ["workday", "slack", "servicenow"]
-            },
-            "user003": {
-                "user_id": "user003",
-                "password": self.hash_password("user123"),
-                "first_name": "Mike",
                 "last_name": "Chen",
-                "email": "mike.chen@company.com",
-                "department": "R&D",
-                "role": "user",
-                "status": "active",
-                "created_date": datetime.now() - timedelta(days=120),
-                "last_login": None,
-                "assigned_apps": ["github", "slack", "servicenow"]
+                "role": "soc_manager",
+                "shift": "Day",
+                "expertise": ["Incident Response", "Threat Hunting", "Forensics"]
+            },
+            "analyst1": {
+                "user_id": "analyst1",
+                "password": self.hash_password("soc123"),
+                "first_name": "Mike",
+                "last_name": "Rodriguez",
+                "role": "soc_analyst",
+                "shift": "Night",
+                "expertise": ["Network Security", "Malware Analysis"]
+            },
+            "analyst2": {
+                "user_id": "analyst2",
+                "password": self.hash_password("soc123"),
+                "first_name": "Lisa",
+                "last_name": "Park",
+                "role": "soc_analyst",
+                "shift": "Day",
+                "expertise": ["SIEM Management", "Threat Intelligence"]
             }
         }
         
-        # Access requests and tickets
-        self.access_requests = []
-        self.support_tickets = []
-        self.access_logs = []
-        self.iam_alerts = []
+        # Initialize data structures
+        self.security_incidents = []
+        self.siem_alerts = []
+        self.threat_intel = []
+        self.network_logs = []
+        self.endpoint_logs = []
+        self.firewall_logs = []
+        self.incident_response_actions = []
         
-        # Generate initial data
-        self.generate_initial_access_requests()
-        self.generate_initial_tickets()
-        self.generate_access_logs()
+        # Generate initial SOC data
+        self.generate_security_incidents()
+        self.generate_siem_alerts()
+        self.generate_network_logs()
+        self.generate_threat_intel()
     
     def hash_password(self, password: str) -> str:
         """Hash password using SHA-256 with salt"""
-        salt = "enterprise_iam_salt_2024"
+        salt = "soc_terminal_salt_2024"
         return hashlib.sha256(f"{password}{salt}".encode()).hexdigest()
     
     def verify_password(self, password: str, hashed: str) -> bool:
@@ -220,852 +207,704 @@ class EnterpriseIAMPlatform:
         return self.hash_password(password) == hashed
     
     def authenticate_user(self, username: str, password: str) -> bool:
-        """Authenticate user credentials"""
-        if username in self.users:
-            user = self.users[username]
-            if user["status"] == "active" and self.verify_password(password, user["password"]):
-                # Update last login
-                self.users[username]["last_login"] = datetime.now()
+        """Authenticate SOC team member"""
+        if username in self.soc_team:
+            user = self.soc_team[username]
+            if self.verify_password(password, user["password"]):
                 return True
         return False
     
-    def generate_initial_access_requests(self):
-        """Generate some initial access requests"""
-        requests_data = [
-            {"user_id": "user001", "app_id": "github", "status": "pending", "reason": "Need access for project development"},
-            {"user_id": "user002", "app_id": "tableau", "status": "approved", "reason": "HR analytics reporting"},
-            {"user_id": "user003", "app_id": "sap", "status": "rejected", "reason": "No business justification provided"}
+    def generate_security_incidents(self):
+        """Generate realistic security incidents"""
+        incident_types = [
+            "Malware Infection", "Phishing Attack", "Data Breach", 
+            "DDoS Attack", "Insider Threat", "Ransomware", "APT Attack"
         ]
         
-        for req_data in requests_data:
-            request_id = f"req_{len(self.access_requests) + 1:06d}"
-            self.access_requests.append({
-                "request_id": request_id,
-                "user_id": req_data["user_id"],
-                "app_id": req_data["app_id"],
-                "app_name": self.applications[req_data["app_id"]]["name"],
-                "status": req_data["status"],
-                "reason": req_data["reason"],
-                "submitted_date": datetime.now() - timedelta(days=random.randint(1, 30)),
-                "reviewed_date": datetime.now() - timedelta(days=random.randint(1, 15)) if req_data["status"] != "pending" else None,
-                "reviewed_by": "admin" if req_data["status"] != "pending" else None
-            })
-    
-    def generate_initial_tickets(self):
-        """Generate some initial support tickets"""
-        tickets_data = [
-            {"user_id": "user001", "subject": "Cannot login to Salesforce", "priority": "high", "status": "open"},
-            {"user_id": "user002", "subject": "Workday access issue", "priority": "medium", "status": "in_progress"},
-            {"user_id": "user003", "subject": "GitHub 2FA reset", "priority": "high", "status": "resolved"}
-        ]
+        statuses = ["New", "Investigating", "Contained", "Resolved", "Escalated"]
+        priorities = ["Low", "Medium", "High", "Critical"]
         
-        for ticket_data in tickets_data:
-            ticket_id = f"tkt_{len(self.support_tickets) + 1:06d}"
-            self.support_tickets.append({
-                "ticket_id": ticket_id,
-                "user_id": ticket_data["user_id"],
-                "subject": ticket_data["subject"],
-                "description": f"Detailed description for {ticket_data['subject']}",
-                "priority": ticket_data["priority"],
-                "status": ticket_data["status"],
-                "category": "access_issue",
-                "created_date": datetime.now() - timedelta(days=random.randint(1, 20)),
-                "assigned_to": "admin",
-                "last_updated": datetime.now() - timedelta(days=random.randint(1, 10))
-            })
-    
-    def generate_access_logs(self):
-        """Generate access logs for monitoring"""
-        for i in range(500):  # Reduced for performance
-            user_id = random.choice(list(self.users.keys()))
-            user = self.users[user_id]
+        for i in range(15):
+            incident_id = f"INC-{2024}-{i+1:04d}"
+            incident_type = random.choice(incident_types)
+            status = random.choice(statuses)
+            priority = random.choice(priorities)
             
-            # Only log access for assigned apps
-            if not user["assigned_apps"]:
-                continue
-                
-            app_id = random.choice(user["assigned_apps"])
-            
-            timestamp = datetime.now() - timedelta(
-                days=random.randint(0, 90),
-                hours=random.randint(0, 23),
-                minutes=random.randint(0, 59)
-            )
-            
-            access_event = {
-                "log_id": f"log_{i:08d}",
-                "user_id": user_id,
-                "app_id": app_id,
-                "app_name": self.applications[app_id]["name"],
-                "timestamp": timestamp,
-                "action": random.choice(["login", "view", "modify", "download"]),
-                "ip_address": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "location": random.choice(["corporate_network", "vpn", "home_office", "mobile"]),
-                "success": random.random() > 0.05,  # 95% success rate
-                "risk_score": random.randint(0, 100)
+            incident = {
+                "incident_id": incident_id,
+                "title": f"{incident_type} - Case {i+1}",
+                "type": incident_type,
+                "status": status,
+                "priority": priority,
+                "assigned_to": random.choice(list(self.soc_team.keys())),
+                "created_time": datetime.now() - timedelta(hours=random.randint(1, 72)),
+                "last_updated": datetime.now() - timedelta(hours=random.randint(0, 12)),
+                "description": f"Security incident involving {incident_type.lower()} detected in the network.",
+                "affected_assets": random.randint(1, 50),
+                "severity_score": random.randint(1, 100),
+                "mitigation_status": random.choice(["Not Started", "In Progress", "Completed"]),
+                "related_alerts": []
             }
             
-            self.access_logs.append(access_event)
+            self.security_incidents.append(incident)
     
-    def create_access_request(self, user_id: str, app_id: str, reason: str) -> str:
-        """Create a new access request"""
-        request_id = f"req_{len(self.access_requests) + 1:06d}"
+    def generate_siem_alerts(self):
+        """Generate SIEM security alerts"""
+        for i in range(50):
+            rule_id = random.choice(list(self.siem_rules.keys()))
+            rule = self.siem_rules[rule_id]
+            
+            alert = {
+                "alert_id": f"ALERT-{i+1:06d}",
+                "rule_id": rule_id,
+                "rule_name": rule["name"],
+                "severity": rule["severity"],
+                "category": rule["category"],
+                "timestamp": datetime.now() - timedelta(minutes=random.randint(1, 240)),
+                "source_ip": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
+                "destination_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
+                "user": f"user{random.randint(1, 1000)}",
+                "description": f"Detected {rule['name'].lower()} from source IP",
+                "status": random.choice(["New", "In Review", "Escalated", "Closed"]),
+                "confidence": random.randint(50, 100)
+            }
+            
+            self.siem_alerts.append(alert)
+    
+    def generate_network_logs(self):
+        """Generate network security logs"""
+        protocols = ["TCP", "UDP", "HTTP", "HTTPS", "DNS", "SSH"]
+        actions = ["ALLOW", "DENY", "DROP"]
         
-        request = {
-            "request_id": request_id,
-            "user_id": user_id,
-            "app_id": app_id,
-            "app_name": self.applications[app_id]["name"],
-            "status": "pending",
-            "reason": reason,
-            "submitted_date": datetime.now(),
-            "reviewed_date": None,
-            "reviewed_by": None
+        for i in range(200):
+            log = {
+                "log_id": f"NET-{i+1:08d}",
+                "timestamp": datetime.now() - timedelta(minutes=random.randint(1, 480)),
+                "source_ip": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
+                "destination_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
+                "source_port": random.randint(1024, 65535),
+                "destination_port": random.randint(1, 1024),
+                "protocol": random.choice(protocols),
+                "action": random.choice(actions),
+                "bytes_sent": random.randint(100, 100000),
+                "bytes_received": random.randint(100, 50000),
+                "threat_indicator": random.random() < 0.1  # 10% are threats
+            }
+            
+            self.network_logs.append(log)
+    
+    def generate_threat_intel(self):
+        """Generate threat intelligence data"""
+        threat_types = ["Malware", "Phishing", "C2 Server", "Exploit Kit", "Botnet"]
+        
+        for i in range(20):
+            intel = {
+                "id": f"THREAT-{i+1:04d}",
+                "type": random.choice(threat_types),
+                "indicator": random.choice(self.threat_feeds["malicious_domains"]),
+                "severity": random.choice(["Low", "Medium", "High", "Critical"]),
+                "first_seen": datetime.now() - timedelta(days=random.randint(1, 30)),
+                "last_seen": datetime.now() - timedelta(hours=random.randint(1, 24)),
+                "source": random.choice(["Internal", "External Feed", "Partner", "Open Source"]),
+                "confidence": random.randint(70, 100)
+            }
+            
+            self.threat_intel.append(intel)
+    
+    def create_incident_response_action(self, incident_id: str, action: str, analyst: str, details: str):
+        """Create incident response action"""
+        action_id = f"IR-{len(self.incident_response_actions) + 1:06d}"
+        
+        ir_action = {
+            "action_id": action_id,
+            "incident_id": incident_id,
+            "action": action,
+            "analyst": analyst,
+            "details": details,
+            "timestamp": datetime.now(),
+            "status": "Completed"
         }
         
-        self.access_requests.append(request)
+        self.incident_response_actions.append(ir_action)
         self.last_update = datetime.now()
-        return request_id
+        return action_id
     
-    def create_support_ticket(self, user_id: str, subject: str, description: str, priority: str, category: str) -> str:
-        """Create a new support ticket"""
-        ticket_id = f"tkt_{len(self.support_tickets) + 1:06d}"
-        
-        ticket = {
-            "ticket_id": ticket_id,
-            "user_id": user_id,
-            "subject": subject,
-            "description": description,
-            "priority": priority,
-            "status": "open",
-            "category": category,
-            "created_date": datetime.now(),
-            "assigned_to": "admin",
-            "last_updated": datetime.now()
-        }
-        
-        self.support_tickets.append(ticket)
-        self.last_update = datetime.now()
-        return ticket_id
-    
-    def assign_application(self, user_id: str, app_id: str) -> bool:
-        """Assign application access to user"""
-        if user_id in self.users and app_id in self.applications:
-            if app_id not in self.users[user_id]["assigned_apps"]:
-                self.users[user_id]["assigned_apps"].append(app_id)
+    def update_incident_status(self, incident_id: str, new_status: str, updated_by: str):
+        """Update incident status"""
+        for incident in self.security_incidents:
+            if incident["incident_id"] == incident_id:
+                incident["status"] = new_status
+                incident["last_updated"] = datetime.now()
+                incident["assigned_to"] = updated_by
                 self.last_update = datetime.now()
                 return True
         return False
     
-    def revoke_application(self, user_id: str, app_id: str) -> bool:
-        """Revoke application access from user"""
-        if user_id in self.users and app_id in self.applications:
-            if app_id in self.users[user_id]["assigned_apps"]:
-                self.users[user_id]["assigned_apps"].remove(app_id)
+    def escalate_alert(self, alert_id: str, new_severity: str, analyst: str):
+        """Escalate SIEM alert severity"""
+        for alert in self.siem_alerts:
+            if alert["alert_id"] == alert_id:
+                alert["severity"] = new_severity
+                alert["status"] = "Escalated"
                 self.last_update = datetime.now()
-                return True
-        return False
-    
-    def process_access_request(self, request_id: str, action: str, reviewed_by: str) -> bool:
-        """Process an access request (approve/reject)"""
-        for request in self.access_requests:
-            if request["request_id"] == request_id and request["status"] == "pending":
-                request["status"] = action
-                request["reviewed_date"] = datetime.now()
-                request["reviewed_by"] = reviewed_by
                 
-                if action == "approved":
-                    self.assign_application(request["user_id"], request["app_id"])
-                
-                self.last_update = datetime.now()
+                # Log the escalation
+                self.create_incident_response_action(
+                    "SYSTEM", 
+                    "Alert Escalation", 
+                    analyst, 
+                    f"Alert {alert_id} escalated to {new_severity}"
+                )
                 return True
         return False
     
-    def update_ticket_status(self, ticket_id: str, status: str, updated_by: str) -> bool:
-        """Update support ticket status"""
-        for ticket in self.support_tickets:
-            if ticket["ticket_id"] == ticket_id:
-                ticket["status"] = status
-                ticket["last_updated"] = datetime.now()
-                self.last_update = datetime.now()
-                return True
-        return False
+    def calculate_threat_level(self):
+        """Calculate overall threat level based on current alerts"""
+        critical_alerts = len([a for a in self.siem_alerts if a["severity"] == "Critical"])
+        high_alerts = len([a for a in self.siem_alerts if a["severity"] == "High"])
+        
+        if critical_alerts > 5:
+            return "CRITICAL", "#ff0000"
+        elif critical_alerts > 2 or high_alerts > 10:
+            return "HIGH", "#ff6600"
+        elif high_alerts > 5:
+            return "ELEVATED", "#ffff00"
+        else:
+            return "NORMAL", "#00ff00"
 
 def auto_refresh():
-    """Auto-refresh the app when data changes"""
-    if 'platform' in st.session_state and 'last_refresh' in st.session_state:
-        platform = st.session_state.platform
-        if platform.last_update > st.session_state.last_refresh:
-            st.session_state.last_refresh = platform.last_update
+    """Auto-refresh the SOC terminal"""
+    if 'soc_terminal' in st.session_state and 'last_refresh' in st.session_state:
+        soc = st.session_state.soc_terminal
+        if soc.last_update > st.session_state.last_refresh:
+            st.session_state.last_refresh = soc.last_update
             st.rerun()
 
-def login_page():
-    """Display login page"""
-    st.markdown('<div class="main-header">🔐 Enterprise IAM Platform</div>', unsafe_allow_html=True)
-    st.markdown("### Identity and Access Management System")
+def soc_login_page():
+    """Display SOC login page"""
+    st.markdown('<div class="main-header">🛡️ SOC OPERATIONS TERMINAL</div>', unsafe_allow_html=True)
+    st.markdown("### SECURITY OPERATIONS CENTER - CLASSIFIED ACCESS ONLY", unsafe_allow_html=True)
     
+    # Terminal-style login
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.image("https://img.icons8.com/color/96/000000/security-checked.png", width=100)
+        st.markdown("""
+        <div style='background-color: #1a1a1a; padding: 20px; border: 1px solid #00ff00; border-radius: 5px;'>
+        <h4 style='color: #00ff00;'>SYSTEM STATUS: ONLINE</h4>
+        <p style='color: #00ff00;'>Threat Level: <span style='color: #ffff00;'>ELEVATED</span></p>
+        <p style='color: #00ff00;'>Last Incident: 5 minutes ago</p>
+        <p style='color: #00ff00;'>Active Alerts: 23</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        with st.form("login_form"):
-            st.subheader("Login")
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            login_button = st.form_submit_button("Login")
+        with st.form("soc_login_form"):
+            st.markdown("**TERMINAL ACCESS**", unsafe_allow_html=True)
+            username = st.text_input("OPERATOR ID")
+            password = st.text_input("ACCESS CODE", type="password")
+            login_button = st.form_submit_button("🔐 INITIATE SESSION")
             
             if login_button:
                 if username and password:
-                    platform = st.session_state.platform
-                    if platform.authenticate_user(username, password):
-                        st.session_state.user = platform.users[username]
+                    soc = st.session_state.soc_terminal
+                    if soc.authenticate_user(username, password):
+                        st.session_state.user = soc.soc_team[username]
                         st.session_state.logged_in = True
-                        st.session_state.last_refresh = platform.last_update
-                        st.success("Login successful!")
+                        st.session_state.last_refresh = soc.last_update
+                        st.success("ACCESS GRANTED - WELCOME TO SOC TERMINAL")
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("Invalid username or password")
+                        st.error("ACCESS DENIED - INVALID CREDENTIALS")
                 else:
-                    st.warning("Please enter both username and password")
+                    st.warning("ENTER CREDENTIALS FOR SYSTEM ACCESS")
     
     # Demo credentials
     st.markdown("---")
-    st.subheader("Demo Credentials")
+    st.markdown("**DEMO ACCESS CREDENTIALS**", unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.write("**Admin Access:**")
-        st.write("Username: `admin`")
-        st.write("Password: `admin123`")
+        st.markdown("**SOC MANAGER**", unsafe_allow_html=True)
+        st.markdown("ID: `soc_manager`", unsafe_allow_html=True)
+        st.markdown("CODE: `soc123`", unsafe_allow_html=True)
     
     with col2:
-        st.write("**User Access:**")
-        st.write("Username: `user001`")
-        st.write("Password: `user123`")
-        st.write("Username: `user002`")
-        st.write("Password: `user123`")
+        st.markdown("**ANALYST 1**", unsafe_allow_html=True)
+        st.markdown("ID: `analyst1`", unsafe_allow_html=True)
+        st.markdown("CODE: `soc123`", unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("**ANALYST 2**", unsafe_allow_html=True)
+        st.markdown("ID: `analyst2`", unsafe_allow_html=True)
+        st.markdown("CODE: `soc123`", unsafe_allow_html=True)
 
-def admin_dashboard():
-    """Display admin dashboard"""
-    platform = st.session_state.platform
+def soc_dashboard():
+    """Display SOC main dashboard"""
+    soc = st.session_state.soc_terminal
     user = st.session_state.user
     
     # Auto-refresh
     auto_refresh()
     
-    st.sidebar.title(f"👋 Welcome, {user['first_name']}")
-    st.sidebar.markdown(f"**Role:** {user['role'].title()}")
-    st.sidebar.markdown(f"**Department:** {user['department']}")
+    # SOC Terminal Header
+    st.markdown(f"""
+    <div style='background-color: #1a1a1a; padding: 10px; border-bottom: 2px solid #00ff00; margin-bottom: 20px;'>
+        <h3 style='color: #00ff00; margin: 0;'>SOC TERMINAL | OPERATOR: {user['first_name']} {user['last_name']} | ROLE: {user['role'].upper()}</h3>
+        <p style='color: #00ff00; margin: 0; font-size: 0.9em;'>LAST UPDATE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    if st.sidebar.button("🚪 Logout"):
-        st.session_state.logged_in = False
-        st.session_state.user = None
-        st.rerun()
+    # Sidebar with quick actions
+    with st.sidebar:
+        st.markdown("**QUICK ACTIONS**", unsafe_allow_html=True)
+        
+        if st.button("🔄 FORCE REFRESH"):
+            st.session_state.last_refresh = datetime.now()
+            st.rerun()
+        
+        if st.button("🚨 NEW INCIDENT"):
+            st.session_state.show_new_incident = True
+        
+        if st.button("📊 SYSTEM STATUS"):
+            st.session_state.show_system_status = True
+        
+        st.markdown("---")
+        st.markdown("**NAVIGATION**", unsafe_allow_html=True)
+        
+        if st.button("🚪 LOGOUT"):
+            st.session_state.logged_in = False
+            st.session_state.user = None
+            st.rerun()
     
-    # Admin navigation
-    page = st.sidebar.radio("Navigation", [
-        "📊 Dashboard",
-        "👥 User Management", 
-        "🔐 Access Control",
-        "📋 Access Requests",
-        "🎫 Support Tickets",
-        "📈 Analytics & Reports"
-    ])
-    
-    if page == "📊 Dashboard":
-        show_admin_dashboard(platform)
-    elif page == "👥 User Management":
-        show_user_management(platform)
-    elif page == "🔐 Access Control":
-        show_access_control(platform)
-    elif page == "📋 Access Requests":
-        show_access_requests(platform)
-    elif page == "🎫 Support Tickets":
-        show_support_tickets(platform)
-    elif page == "📈 Analytics & Reports":
-        show_analytics_reports(platform)
+    # Main SOC Dashboard
+    show_soc_dashboard(soc)
 
-def user_dashboard():
-    """Display user dashboard"""
-    platform = st.session_state.platform
-    user = st.session_state.user
+def show_soc_dashboard(soc):
+    """Display SOC dashboard with security overview"""
     
-    # Auto-refresh
-    auto_refresh()
+    # Threat Level Banner
+    threat_level, threat_color = soc.calculate_threat_level()
+    st.markdown(f"""
+    <div style='background-color: #1a1a1a; padding: 15px; border: 2px solid {threat_color}; border-radius: 5px; margin-bottom: 20px;'>
+        <h2 style='color: {threat_color}; text-align: center; margin: 0;'>CURRENT THREAT LEVEL: {threat_level}</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.sidebar.title(f"👋 Welcome, {user['first_name']}")
-    st.sidebar.markdown(f"**Role:** {user['role'].title()}")
-    st.sidebar.markdown(f"**Department:** {user['department']}")
-    
-    if st.sidebar.button("🚪 Logout"):
-        st.session_state.logged_in = False
-        st.session_state.user = None
-        st.rerun()
-    
-    # User navigation
-    page = st.sidebar.radio("Navigation", [
-        "🏠 My Dashboard",
-        "📱 My Applications", 
-        "🔐 Request Access",
-        "🎫 My Tickets",
-        "📊 My Activity"
-    ])
-    
-    if page == "🏠 My Dashboard":
-        show_user_dashboard(platform)
-    elif page == "📱 My Applications":
-        show_my_applications(platform)
-    elif page == "🔐 Request Access":
-        show_request_access(platform)
-    elif page == "🎫 My Tickets":
-        show_my_tickets(platform)
-    elif page == "📊 My Activity":
-        show_my_activity(platform)
-
-def show_admin_dashboard(platform):
-    """Display admin dashboard overview"""
-    st.header("Admin Dashboard")
-    
-    # KPI Metrics
+    # Key Security Metrics
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        total_users = len(platform.users)
-        st.metric("Total Users", total_users)
+        critical_alerts = len([a for a in soc.siem_alerts if a["severity"] == "Critical"])
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3 style='color: #ff0000;'>{critical_alerts}</h3>
+            <p>CRITICAL ALERTS</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        pending_requests = len([r for r in platform.access_requests if r["status"] == "pending"])
-        st.metric("Pending Requests", pending_requests, delta_color="inverse")
+        active_incidents = len([i for i in soc.security_incidents if i["status"] in ["New", "Investigating"]])
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3 style='color: #ff6600;'>{active_incidents}</h3>
+            <p>ACTIVE INCIDENTS</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        open_tickets = len([t for t in platform.support_tickets if t["status"] == "open"])
-        st.metric("Open Tickets", open_tickets, delta_color="inverse")
+        total_alerts = len(soc.siem_alerts)
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3 style='color: #ffff00;'>{total_alerts}</h3>
+            <p>TOTAL ALERTS (24H)</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col4:
-        total_apps = len(platform.applications)
-        st.metric("Managed Applications", total_apps)
+        avg_response_time = "15m"  # This would be calculated in real implementation
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3 style='color: #00ff00;'>{avg_response_time}</h3>
+            <p>AVG RESPONSE TIME</p>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Recent activity
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Recent Access Requests")
-        recent_requests = sorted(platform.access_requests, key=lambda x: x["submitted_date"], reverse=True)[:5]
-        if recent_requests:
-            for req in recent_requests:
-                status_color = "🟡" if req["status"] == "pending" else "🟢" if req["status"] == "approved" else "🔴"
-                st.write(f"{status_color} **{req['user_id']}** - {req['app_name']} - *{req['status']}*")
-        else:
-            st.info("No access requests")
-    
-    with col2:
-        st.subheader("Recent Support Tickets")
-        recent_tickets = sorted(platform.support_tickets, key=lambda x: x["created_date"], reverse=True)[:5]
-        if recent_tickets:
-            for ticket in recent_tickets:
-                priority_color = "🔴" if ticket["priority"] == "high" else "🟡" if ticket["priority"] == "medium" else "🟢"
-                st.write(f"{priority_color} **{ticket['user_id']}** - {ticket['subject']}")
-        else:
-            st.info("No support tickets")
-    
-    # Quick actions
-    st.subheader("Quick Actions")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("👥 Manage Users"):
-            pass  # Navigation handled by radio
-    
-    with col2:
-        if st.button("🔐 Review Requests"):
-            pass
-    
-    with col3:
-        if st.button("🎫 Handle Tickets"):
-            pass
-
-def show_user_management(platform):
-    """Display user management interface"""
-    st.header("User Management")
-    
-    # Users table
-    users_data = []
-    for user_id, user_info in platform.users.items():
-        users_data.append({
-            "User ID": user_id,
-            "Name": f"{user_info['first_name']} {user_info['last_name']}",
-            "Email": user_info["email"],
-            "Department": user_info["department"],
-            "Role": user_info["role"],
-            "Status": user_info["status"],
-            "Assigned Apps": len(user_info["assigned_apps"]),
-            "Last Login": user_info["last_login"]
-        })
-    
-    users_df = pd.DataFrame(users_data)
-    st.dataframe(users_df, use_container_width=True)
-    
-    # User actions
-    st.subheader("User Actions")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        selected_user = st.selectbox("Select User", list(platform.users.keys()))
-    
-    with col2:
-        action = st.selectbox("Action", ["View Details", "Edit User", "Reset Password", "Deactivate User"])
-    
-    with col3:
-        if st.button("Execute Action"):
-            if action == "View Details":
-                user_info = platform.users[selected_user]
-                st.subheader(f"User Details: {selected_user}")
-                st.write(f"**Name:** {user_info['first_name']} {user_info['last_name']}")
-                st.write(f"**Email:** {user_info['email']}")
-                st.write(f"**Department:** {user_info['department']}")
-                st.write(f"**Role:** {user_info['role']}")
-                st.write(f"**Status:** {user_info['status']}")
-                st.write(f"**Assigned Applications:** {', '.join(user_info['assigned_apps'])}")
-
-def show_access_control(platform):
-    """Display access control management"""
-    st.header("Access Control Management")
-    
-    # Application access matrix
-    st.subheader("Application Access Matrix")
-    
-    # Create access matrix
-    users = list(platform.users.keys())
-    apps = list(platform.applications.keys())
-    
-    access_matrix = []
-    for user_id in users:
-        user_access = []
-        for app_id in apps:
-            has_access = app_id in platform.users[user_id]["assigned_apps"]
-            user_access.append(has_access)
-        access_matrix.append(user_access)
-    
-    # Display as dataframe
-    matrix_df = pd.DataFrame(
-        access_matrix,
-        index=[f"{platform.users[uid]['first_name']} {platform.users[uid]['last_name']}" for uid in users],
-        columns=[platform.applications[aid]["name"] for aid in apps]
-    )
-    
-    # Apply styling for better visualization
-    def color_boolean(val):
-        color = 'background-color: #90EE90' if val else 'background-color: #FFCCCB'
-        return color
-    
-    st.dataframe(matrix_df.style.applymap(color_boolean))
-    
-    # Grant/Revoke access
-    st.subheader("Grant/Revoke Access")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        selected_user = st.selectbox("Select User", [uid for uid in platform.users.keys() if uid != "admin"])
-    
-    with col2:
-        selected_app = st.selectbox("Select Application", list(platform.applications.keys()))
-    
-    with col3:
-        current_access = selected_app in platform.users[selected_user]["assigned_apps"]
-        st.write(f"Current Access: {'✅ Granted' if current_access else '❌ Not Granted'}")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if not current_access and st.button("Grant Access"):
-                if platform.assign_application(selected_user, selected_app):
-                    st.success(f"Access to {platform.applications[selected_app]['name']} granted to {selected_user}")
-                    st.rerun()
-        with col2:
-            if current_access and st.button("Revoke Access"):
-                if platform.revoke_application(selected_user, selected_app):
-                    st.success(f"Access to {platform.applications[selected_app]['name']} revoked from {selected_user}")
-                    st.rerun()
-
-def show_access_requests(platform):
-    """Display access request management"""
-    st.header("Access Request Management")
-    
-    # Filter requests
-    status_filter = st.selectbox("Filter by Status", ["all", "pending", "approved", "rejected"])
-    
-    filtered_requests = platform.access_requests
-    if status_filter != "all":
-        filtered_requests = [r for r in platform.access_requests if r["status"] == status_filter]
-    
-    if filtered_requests:
-        for request in filtered_requests:
-            with st.expander(f"📋 {request['app_name']} - {request['user_id']} - {request['status'].title()}"):
-                col1, col2 = st.columns([3, 1])
-                
-                with col1:
-                    st.write(f"**User:** {request['user_id']}")
-                    st.write(f"**Application:** {request['app_name']}")
-                    st.write(f"**Reason:** {request['reason']}")
-                    st.write(f"**Submitted:** {request['submitted_date'].strftime('%Y-%m-%d %H:%M')}")
-                    
-                    if request["reviewed_date"]:
-                        st.write(f"**Reviewed:** {request['reviewed_date'].strftime('%Y-%m-%d %H:%M')}")
-                        st.write(f"**Reviewed By:** {request['reviewed_by']}")
-                
-                with col2:
-                    if request["status"] == "pending":
-                        if st.button("Approve", key=f"approve_{request['request_id']}"):
-                            if platform.process_access_request(request["request_id"], "approved", st.session_state.user["user_id"]):
-                                st.success("Request approved!")
-                                st.rerun()
-                        
-                        if st.button("Reject", key=f"reject_{request['request_id']}"):
-                            if platform.process_access_request(request["request_id"], "rejected", st.session_state.user["user_id"]):
-                                st.success("Request rejected!")
-                                st.rerun()
-                    else:
-                        st.write(f"Status: {request['status'].title()}")
-    else:
-        st.info("No access requests found with the selected filter")
-
-def show_support_tickets(platform):
-    """Display support ticket management"""
-    st.header("Support Ticket Management")
-    
-    # Filter tickets
-    status_filter = st.selectbox("Filter by Status", ["all", "open", "in_progress", "resolved"])
-    
-    filtered_tickets = platform.support_tickets
-    if status_filter != "all":
-        filtered_tickets = [t for t in platform.support_tickets if t["status"] == status_filter]
-    
-    if filtered_tickets:
-        for ticket in filtered_tickets:
-            priority_color = "🔴" if ticket["priority"] == "high" else "🟡" if ticket["priority"] == "medium" else "🟢"
-            
-            with st.expander(f"{priority_color} {ticket['subject']} - {ticket['user_id']}"):
-                col1, col2 = st.columns([3, 1])
-                
-                with col1:
-                    st.write(f"**User:** {ticket['user_id']}")
-                    st.write(f"**Subject:** {ticket['subject']}")
-                    st.write(f"**Description:** {ticket['description']}")
-                    st.write(f"**Priority:** {ticket['priority'].title()}")
-                    st.write(f"**Category:** {ticket['category'].replace('_', ' ').title()}")
-                    st.write(f"**Created:** {ticket['created_date'].strftime('%Y-%m-%d %H:%M')}")
-                    st.write(f"**Assigned To:** {ticket['assigned_to']}")
-                
-                with col2:
-                    current_status = ticket["status"]
-                    new_status = st.selectbox(
-                        "Update Status", 
-                        ["open", "in_progress", "resolved"],
-                        index=["open", "in_progress", "resolved"].index(current_status),
-                        key=f"status_{ticket['ticket_id']}"
-                    )
-                    
-                    if new_status != current_status:
-                        if st.button("Update Status", key=f"update_{ticket['ticket_id']}"):
-                            if platform.update_ticket_status(ticket["ticket_id"], new_status, st.session_state.user["user_id"]):
-                                st.success("Ticket status updated!")
-                                st.rerun()
-    else:
-        st.info("No support tickets found with the selected filter")
-
-def show_analytics_reports(platform):
-    """Display analytics and reports"""
-    st.header("Analytics & Reports")
+    # Real-time Security Monitoring
+    st.markdown("## 📡 REAL-TIME SECURITY MONITORING")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Application usage
-        st.subheader("Application Usage")
-        app_usage = {}
-        for log in platform.access_logs:
-            app_name = log["app_name"]
-            app_usage[app_name] = app_usage.get(app_name, 0) + 1
+        # Alert Severity Distribution
+        st.markdown("### ALERT SEVERITY DISTRIBUTION")
+        severity_counts = {}
+        for alert in soc.siem_alerts:
+            severity = alert["severity"]
+            severity_counts[severity] = severity_counts.get(severity, 0) + 1
         
-        if app_usage:
-            fig = px.pie(values=list(app_usage.values()), names=list(app_usage.keys()))
+        if severity_counts:
+            fig = px.pie(
+                values=list(severity_counts.values()), 
+                names=list(severity_counts.keys()),
+                color=list(severity_counts.keys()),
+                color_discrete_map={
+                    'Critical': '#ff0000',
+                    'High': '#ff6600', 
+                    'Medium': '#ffff00',
+                    'Low': '#00ff00'
+                }
+            )
+            fig.update_layout(
+                paper_bgcolor='#1a1a1a',
+                plot_bgcolor='#1a1a1a',
+                font_color='#00ff00'
+            )
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No usage data available")
     
     with col2:
-        # Access requests by status
-        st.subheader("Access Requests Status")
-        request_status = {}
-        for req in platform.access_requests:
-            status = req["status"]
-            request_status[status] = request_status.get(status, 0) + 1
+        # Incident Status Overview
+        st.markdown("### INCIDENT STATUS OVERVIEW")
+        status_counts = {}
+        for incident in soc.security_incidents:
+            status = incident["status"]
+            status_counts[status] = status_counts.get(status, 0) + 1
         
-        if request_status:
-            fig = px.bar(x=list(request_status.keys()), y=list(request_status.values()))
+        if status_counts:
+            fig = px.bar(
+                x=list(status_counts.keys()),
+                y=list(status_counts.values()),
+                color=list(status_counts.keys())
+            )
+            fig.update_layout(
+                paper_bgcolor='#1a1a1a',
+                plot_bgcolor='#1a1a1a',
+                font_color='#00ff00',
+                xaxis_title="Status",
+                yaxis_title="Count"
+            )
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No access request data available")
     
-    # Generate reports
-    st.subheader("Generate Reports")
+    # Recent Critical Alerts
+    st.markdown("## 🚨 RECENT CRITICAL ALERTS")
+    critical_alerts = [a for a in soc.siem_alerts if a["severity"] == "Critical"][:5]
     
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("📊 User Access Report"):
-            st.success("User Access Report generated!")
-    
-    with col2:
-        if st.button("🔐 Compliance Report"):
-            st.success("Compliance Report generated!")
-    
-    with col3:
-        if st.button("📈 Usage Analytics"):
-            st.success("Usage Analytics Report generated!")
-
-def show_user_dashboard(platform):
-    """Display user dashboard overview"""
-    user = st.session_state.user
-    
-    st.header(f"Welcome, {user['first_name']} {user['last_name']}")
-    
-    # User metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        assigned_apps_count = len(user["assigned_apps"])
-        st.metric("My Applications", assigned_apps_count)
-    
-    with col2:
-        my_requests = len([r for r in platform.access_requests if r["user_id"] == user["user_id"]])
-        st.metric("My Requests", my_requests)
-    
-    with col3:
-        my_tickets = len([t for t in platform.support_tickets if t["user_id"] == user["user_id"]])
-        st.metric("My Tickets", my_tickets)
-    
-    with col4:
-        recent_logins = len([log for log in platform.access_logs if log["user_id"] == user["user_id"] and log["action"] == "login"])
-        st.metric("Recent Logins", recent_logins)
-    
-    # Quick access to applications
-    st.subheader("Quick Access to Applications")
-    
-    if user["assigned_apps"]:
-        cols = st.columns(3)
-        for idx, app_id in enumerate(user["assigned_apps"][:6]):
-            app = platform.applications[app_id]
-            with cols[idx % 3]:
-                st.markdown(f"""
-                <div class="app-card">
-                    <h4>{app['name']}</h4>
-                    <p>{app['description']}</p>
-                    <small>Category: {app['category']}</small>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if st.button("Launch", key=f"launch_{app_id}"):
-                    st.success(f"Launching {app['name']}...")
-    else:
-        st.info("You don't have access to any applications yet. Request access below.")
-    
-    # Recent activity
-    st.subheader("My Recent Activity")
-    user_logs = [log for log in platform.access_logs if log["user_id"] == user["user_id"]]
-    recent_logs = sorted(user_logs, key=lambda x: x["timestamp"], reverse=True)[:5]
-    
-    if recent_logs:
-        for log in recent_logs:
-            success_icon = "✅" if log["success"] else "❌"
-            st.write(f"{success_icon} **{log['app_name']}** - {log['action']} - {log['timestamp'].strftime('%Y-%m-%d %H:%M')}")
-    else:
-        st.info("No recent activity found")
-
-def show_my_applications(platform):
-    """Display user's assigned applications"""
-    user = st.session_state.user
-    
-    st.header("My Applications")
-    
-    if user["assigned_apps"]:
-        for app_id in user["assigned_apps"]:
-            app = platform.applications[app_id]
+    if critical_alerts:
+        for alert in critical_alerts:
+            alert_class = "alert-critical"
             
-            col1, col2 = st.columns([3, 1])
+            st.markdown(f'<div class="{alert_class}">', unsafe_allow_html=True)
+            col1, col2, col3 = st.columns([3, 2, 1])
             
             with col1:
-                st.markdown(f"""
-                <div class="app-card">
-                    <h3>{app['name']}</h3>
-                    <p><strong>Description:</strong> {app['description']}</p>
-                    <p><strong>Category:</strong> {app['category']}</p>
-                    <p><strong>Risk Level:</strong> {app['risk_level'].title()}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"**{alert['rule_name']}**", unsafe_allow_html=True)
+                st.markdown(f"Source: {alert['source_ip']} → Dest: {alert['destination_ip']}", unsafe_allow_html=True)
+                st.markdown(f"Time: {alert['timestamp'].strftime('%H:%M:%S')}", unsafe_allow_html=True)
             
             with col2:
-                if st.button("Launch Application", key=f"open_{app_id}"):
-                    st.success(f"Opening {app['name']}...")
+                st.markdown(f"Status: **{alert['status']}**", unsafe_allow_html=True)
+                st.markdown(f"Confidence: {alert['confidence']}%", unsafe_allow_html=True)
+            
+            with col3:
+                if st.button("ESCALATE", key=f"escalate_{alert['alert_id']}"):
+                    soc.escalate_alert(alert["alert_id"], "Critical", st.session_state.user["user_id"])
+                    st.rerun()
                 
-                if st.button("View Details", key=f"details_{app_id}"):
-                    st.info(f"Detailed information about {app['name']}")
+                if st.button("DETAILS", key=f"details_{alert['alert_id']}"):
+                    st.session_state.selected_alert = alert["alert_id"]
+            
+            st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.info("You don't have access to any applications yet.")
-        st.markdown("Visit the **Request Access** page to request application access.")
-
-def show_request_access(platform):
-    """Display access request interface"""
-    user = st.session_state.user
+        st.markdown("<div class='alert-low'>No critical alerts at this time</div>", unsafe_allow_html=True)
     
-    st.header("Request Application Access")
+    # Active Incidents
+    st.markdown("## 🚧 ACTIVE SECURITY INCIDENTS")
+    active_incidents = [i for i in soc.security_incidents if i["status"] in ["New", "Investigating"]][:5]
     
-    # Available applications (excluding already assigned)
-    available_apps = [app_id for app_id in platform.applications.keys() if app_id not in user["assigned_apps"]]
-    
-    if available_apps:
-        with st.form("access_request_form"):
-            st.subheader("New Access Request")
+    if active_incidents:
+        for incident in active_incidents:
+            priority_class = f"alert-{incident['priority'].lower()}"
             
-            selected_app = st.selectbox(
-                "Select Application",
-                available_apps,
-                format_func=lambda x: platform.applications[x]["name"]
-            )
+            st.markdown(f'<div class="{priority_class}">', unsafe_allow_html=True)
+            col1, col2, col3 = st.columns([3, 2, 1])
             
-            reason = st.text_area(
-                "Business Justification",
-                placeholder="Explain why you need access to this application..."
-            )
+            with col1:
+                st.markdown(f"**{incident['title']}**", unsafe_allow_html=True)
+                st.markdown(f"ID: {incident['incident_id']}", unsafe_allow_html=True)
+                st.markdown(f"Type: {incident['type']}", unsafe_allow_html=True)
             
-            submitted = st.form_submit_button("Submit Request")
+            with col2:
+                st.markdown(f"Priority: **{incident['priority']}**", unsafe_allow_html=True)
+                st.markdown(f"Assigned: {incident['assigned_to']}", unsafe_allow_html=True)
+                st.markdown(f"Severity Score: {incident['severity_score']}/100", unsafe_allow_html=True)
             
-            if submitted:
-                if reason.strip():
-                    request_id = platform.create_access_request(user["user_id"], selected_app, reason)
-                    st.success(f"Access request submitted successfully! Request ID: {request_id}")
-                else:
-                    st.error("Please provide a business justification for your access request")
-    else:
-        st.success("🎉 You already have access to all available applications!")
-    
-    # Show request history
-    st.subheader("My Access Requests")
-    my_requests = [r for r in platform.access_requests if r["user_id"] == user["user_id"]]
-    
-    if my_requests:
-        for request in sorted(my_requests, key=lambda x: x["submitted_date"], reverse=True):
-            status_icon = "🟡" if request["status"] == "pending" else "🟢" if request["status"] == "approved" else "🔴"
-            
-            with st.expander(f"{status_icon} {request['app_name']} - {request['status'].title()}"):
-                st.write(f"**Request ID:** {request['request_id']}")
-                st.write(f"**Application:** {request['app_name']}")
-                st.write(f"**Reason:** {request['reason']}")
-                st.write(f"**Submitted:** {request['submitted_date'].strftime('%Y-%m-%d %H:%M')}")
-                
-                if request["reviewed_date"]:
-                    st.write(f"**Reviewed:** {request['reviewed_date'].strftime('%Y-%m-%d %H:%M')}")
-                    st.write(f"**Reviewed By:** {request['reviewed_by']}")
-    else:
-        st.info("You haven't submitted any access requests yet.")
-
-def show_my_tickets(platform):
-    """Display user's support tickets"""
-    user = st.session_state.user
-    
-    st.header("My Support Tickets")
-    
-    # Create new ticket
-    with st.form("new_ticket_form"):
-        st.subheader("Create New Ticket")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            subject = st.text_input("Subject")
-            category = st.selectbox("Category", ["access_issue", "technical_issue", "password_reset", "other"])
-        
-        with col2:
-            priority = st.selectbox("Priority", ["low", "medium", "high"])
-            description = st.text_area("Description")
-        
-        submitted = st.form_submit_button("Create Ticket")
-        
-        if submitted:
-            if subject and description:
-                ticket_id = platform.create_support_ticket(
-                    user["user_id"], subject, description, priority, category
+            with col3:
+                new_status = st.selectbox(
+                    "Update Status",
+                    ["New", "Investigating", "Contained", "Resolved"],
+                    index=["New", "Investigating", "Contained", "Resolved"].index(incident["status"]),
+                    key=f"status_{incident['incident_id']}"
                 )
-                st.success(f"Support ticket created successfully! Ticket ID: {ticket_id}")
-            else:
-                st.error("Please fill in all required fields")
-    
-    # Show ticket history
-    st.subheader("My Ticket History")
-    my_tickets = [t for t in platform.support_tickets if t["user_id"] == user["user_id"]]
-    
-    if my_tickets:
-        for ticket in sorted(my_tickets, key=lambda x: x["created_date"], reverse=True):
-            priority_color = "🔴" if ticket["priority"] == "high" else "🟡" if ticket["priority"] == "medium" else "🟢"
-            status_icon = "🟡" if ticket["status"] == "open" else "🔵" if ticket["status"] == "in_progress" else "🟢"
+                
+                if new_status != incident["status"]:
+                    if st.button("UPDATE", key=f"update_{incident['incident_id']}"):
+                        soc.update_incident_status(incident["incident_id"], new_status, st.session_state.user["user_id"])
+                        st.rerun()
             
-            with st.expander(f"{priority_color} {ticket['subject']} - {status_icon} {ticket['status'].replace('_', ' ').title()}"):
-                st.write(f"**Ticket ID:** {ticket['ticket_id']}")
-                st.write(f"**Subject:** {ticket['subject']}")
-                st.write(f"**Description:** {ticket['description']}")
-                st.write(f"**Priority:** {ticket['priority'].title()}")
-                st.write(f"**Category:** {ticket['category'].replace('_', ' ').title()}")
-                st.write(f"**Status:** {ticket['status'].replace('_', ' ').title()}")
-                st.write(f"**Created:** {ticket['created_date'].strftime('%Y-%m-%d %H:%M')}")
-                st.write(f"**Assigned To:** {ticket['assigned_to']}")
-                st.write(f"**Last Updated:** {ticket['last_updated'].strftime('%Y-%m-%d %H:%M')}")
-    else:
-        st.info("You haven't created any support tickets yet.")
+            st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Real-time Log Feed (simulated)
+    st.markdown("## 📊 REAL-TIME SECURITY LOGS")
+    
+    # Show recent network logs
+    recent_logs = soc.network_logs[-10:]  # Last 10 logs
+    for log in reversed(recent_logs):
+        log_color = "#ff0000" if log["threat_indicator"] else "#00ff00"
+        st.markdown(f"""
+        <div class="log-entry">
+            <span style='color: {log_color};'>[{log['timestamp'].strftime('%H:%M:%S')}]</span>
+            {log['source_ip']}:{log['source_port']} → {log['destination_ip']}:{log['destination_port']}
+            <span style='color: #ffff00;'>{log['protocol']}</span> 
+            <span style='color: #ff6600;'>{log['action']}</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-def show_my_activity(platform):
-    """Display user's activity logs"""
-    user = st.session_state.user
+def incident_management(soc):
+    """Display incident management interface"""
+    st.markdown("## 🚧 INCIDENT MANAGEMENT")
     
-    st.header("My Activity Logs")
+    # Incident filters
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        status_filter = st.selectbox("Filter by Status", ["All", "New", "Investigating", "Contained", "Resolved"])
+    with col2:
+        priority_filter = st.selectbox("Filter by Priority", ["All", "Critical", "High", "Medium", "Low"])
+    with col3:
+        type_filter = st.selectbox("Filter by Type", ["All"] + list(set(i["type"] for i in soc.security_incidents)))
     
-    user_logs = [log for log in platform.access_logs if log["user_id"] == user["user_id"]]
+    # Apply filters
+    filtered_incidents = soc.security_incidents
+    if status_filter != "All":
+        filtered_incidents = [i for i in filtered_incidents if i["status"] == status_filter]
+    if priority_filter != "All":
+        filtered_incidents = [i for i in filtered_incidents if i["priority"] == priority_filter]
+    if type_filter != "All":
+        filtered_incidents = [i for i in filtered_incidents if i["type"] == type_filter]
     
-    if user_logs:
-        # Filters
-        col1, col2, col3 = st.columns(3)
+    # Display incidents
+    for incident in sorted(filtered_incidents, key=lambda x: x["created_time"], reverse=True):
+        priority_class = f"alert-{incident['priority'].lower()}"
+        
+        with st.expander(f"{incident['incident_id']} - {incident['title']} - {incident['status']}"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown(f"**Incident Details**", unsafe_allow_html=True)
+                st.markdown(f"Type: {incident['type']}", unsafe_allow_html=True)
+                st.markdown(f"Priority: {incident['priority']}", unsafe_allow_html=True)
+                st.markdown(f"Status: {incident['status']}", unsafe_allow_html=True)
+                st.markdown(f"Created: {incident['created_time'].strftime('%Y-%m-%d %H:%M')}", unsafe_allow_html=True)
+                st.markdown(f"Last Updated: {incident['last_updated'].strftime('%Y-%m-%d %H:%M')}", unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"**Response Details**", unsafe_allow_html=True)
+                st.markdown(f"Assigned To: {incident['assigned_to']}", unsafe_allow_html=True)
+                st.markdown(f"Affected Assets: {incident['affected_assets']}", unsafe_allow_html=True)
+                st.markdown(f"Severity Score: {incident['severity_score']}/100", unsafe_allow_html=True)
+                st.markdown(f"Mitigation: {incident['mitigation_status']}", unsafe_allow_html=True)
+            
+            st.markdown(f"**Description:** {incident['description']}", unsafe_allow_html=True)
+            
+            # Incident response actions
+            st.markdown("**Incident Response Actions**", unsafe_allow_html=True)
+            action_col1, action_col2, action_col3 = st.columns(3)
+            
+            with action_col1:
+                if st.button("📋 Start Investigation", key=f"invest_{incident['incident_id']}"):
+                    soc.update_incident_status(incident["incident_id"], "Investigating", st.session_state.user["user_id"])
+                    st.rerun()
+            
+            with action_col2:
+                if st.button("🛡️ Mark Contained", key=f"contain_{incident['incident_id']}"):
+                    soc.update_incident_status(incident["incident_id"], "Contained", st.session_state.user["user_id"])
+                    st.rerun()
+            
+            with action_col3:
+                if st.button("✅ Mark Resolved", key=f"resolve_{incident['incident_id']}"):
+                    soc.update_incident_status(incident["incident_id"], "Resolved", st.session_state.user["user_id"])
+                    st.rerun()
+            
+            # Add notes/actions
+            with st.form(f"action_form_{incident['incident_id']}"):
+                action_note = st.text_area("Add Action/Note")
+                if st.form_submit_button("Add to Incident Log"):
+                    if action_note:
+                        soc.create_incident_response_action(
+                            incident["incident_id"],
+                            "Note Added",
+                            st.session_state.user["user_id"],
+                            action_note
+                        )
+                        st.success("Action logged successfully!")
+                        st.rerun()
+
+def threat_intelligence(soc):
+    """Display threat intelligence dashboard"""
+    st.markdown("## 🕵️ THREAT INTELLIGENCE DASHBOARD")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🔥 ACTIVE THREATS")
+        for threat in soc.threat_intel[-5:]:
+            severity_color = {
+                "Critical": "#ff0000",
+                "High": "#ff6600", 
+                "Medium": "#ffff00",
+                "Low": "#00ff00"
+            }[threat["severity"]]
+            
+            st.markdown(f"""
+            <div class="threat-indicator">
+                <strong style='color: {severity_color};'>{threat['type']}</strong><br>
+                Indicator: {threat['indicator']}<br>
+                Severity: {threat['severity']} | Confidence: {threat['confidence']}%<br>
+                Last Seen: {threat['last_seen'].strftime('%Y-%m-%d %H:%M')}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### 📈 THREAT FEED ACTIVITY")
+        
+        # Threat type distribution
+        threat_types = {}
+        for threat in soc.threat_intel:
+            t_type = threat["type"]
+            threat_types[t_type] = threat_types.get(t_type, 0) + 1
+        
+        if threat_types:
+            fig = px.pie(values=list(threat_types.values()), names=list(threat_types.keys()))
+            fig.update_layout(
+                paper_bgcolor='#1a1a1a',
+                plot_bgcolor='#1a1a1a',
+                font_color='#00ff00'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Threat Intelligence Feed
+    st.markdown("### 📡 THREAT INTELLIGENCE FEED")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**SUSPICIOUS IPs**", unsafe_allow_html=True)
+        for ip in soc.threat_feeds["suspicious_ips"][:5]:
+            st.markdown(f"`{ip}`", unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("**MALWARE HASHES**", unsafe_allow_html=True)
+        for hash_val in soc.threat_feeds["malware_hashes"][:3]:
+            st.markdown(f"`{hash_val[:16]}...`", unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("**MALICIOUS DOMAINS**", unsafe_allow_html=True)
+        for domain in soc.threat_feeds["malicious_domains"][:5]:
+            st.markdown(f"`{domain}`", unsafe_allow_html=True)
+
+def forensics_analysis(soc):
+    """Display digital forensics and analysis tools"""
+    st.markdown("## 🔍 DIGITAL FORENSICS & ANALYSIS")
+    
+    tab1, tab2, tab3 = st.tabs(["Network Analysis", "Endpoint Analysis", "Malware Analysis"])
+    
+    with tab1:
+        st.markdown("### 🌐 NETWORK TRAFFIC ANALYSIS")
+        
+        # Network traffic statistics
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            app_filter = st.selectbox("Filter by Application", ["all"] + list(set(log["app_name"] for log in user_logs)))
+            total_connections = len(soc.network_logs)
+            st.metric("Total Connections", total_connections)
         
         with col2:
-            action_filter = st.selectbox("Filter by Action", ["all"] + list(set(log["action"] for log in user_logs)))
+            blocked_connections = len([log for log in soc.network_logs if log["action"] in ["DENY", "DROP"]])
+            st.metric("Blocked Connections", blocked_connections)
         
         with col3:
-            success_filter = st.selectbox("Filter by Status", ["all", "success", "failed"])
+            suspicious_ips = len(set([log["source_ip"] for log in soc.network_logs if log["threat_indicator"]]))
+            st.metric("Suspicious IPs", suspicious_ips)
         
-        # Apply filters
-        filtered_logs = user_logs
-        if app_filter != "all":
-            filtered_logs = [log for log in filtered_logs if log["app_name"] == app_filter]
-        if action_filter != "all":
-            filtered_logs = [log for log in filtered_logs if log["action"] == action_filter]
-        if success_filter != "all":
-            filtered_logs = [log for log in filtered_logs if log["success"] == (success_filter == "success")]
+        with col4:
+            data_transferred = sum([log["bytes_sent"] + log["bytes_received"] for log in soc.network_logs])
+            st.metric("Data Transferred", f"{data_transferred/1024/1024:.1f} MB")
         
-        # Display logs
-        for log in sorted(filtered_logs, key=lambda x: x["timestamp"], reverse=True)[:20]:
-            success_icon = "✅" if log["success"] else "❌"
-            st.write(f"{success_icon} **{log['app_name']}** - {log['action']} - {log['timestamp'].strftime('%Y-%m-%d %H:%M')} - {log['location']}")
-    else:
-        st.info("No activity logs found for your account.")
+        # Protocol distribution
+        st.markdown("**Protocol Distribution**", unsafe_allow_html=True)
+        protocol_counts = {}
+        for log in soc.network_logs:
+            protocol = log["protocol"]
+            protocol_counts[protocol] = protocol_counts.get(protocol, 0) + 1
+        
+        if protocol_counts:
+            fig = px.bar(x=list(protocol_counts.keys()), y=list(protocol_counts.values()))
+            fig.update_layout(
+                paper_bgcolor='#1a1a1a',
+                plot_bgcolor='#1a1a1a',
+                font_color='#00ff00'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with tab2:
+        st.markdown("### 💻 ENDPOINT SECURITY ANALYSIS")
+        
+        # Simulated endpoint data
+        endpoints = [
+            {"hostname": "WS-001", "status": "Compromised", "last_seen": "2 minutes ago", "threats": 3},
+            {"hostname": "SRV-005", "status": "Suspicious", "last_seen": "15 minutes ago", "threats": 1},
+            {"hostname": "LAP-023", "status": "Clean", "last_seen": "1 hour ago", "threats": 0},
+            {"hostname": "WS-042", "status": "Compromised", "last_seen": "5 minutes ago", "threats": 2},
+            {"hostname": "SRV-012", "status": "Clean", "last_seen": "30 minutes ago", "threats": 0}
+        ]
+        
+        for endpoint in endpoints:
+            status_color = "#ff0000" if endpoint["status"] == "Compromised" else "#ffff00" if endpoint["status"] == "Suspicious" else "#00ff00"
+            
+            st.markdown(f"""
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border: 1px solid {status_color}; border-radius: 3px;'>
+                <strong>{endpoint['hostname']}</strong> | 
+                Status: <span style='color: {status_color};'>{endpoint['status']}</span> | 
+                Threats: {endpoint['threats']} | 
+                Last Seen: {endpoint['last_seen']}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with tab3:
+        st.markdown("### 🦠 MALWARE ANALYSIS")
+        
+        st.markdown("**Recent Malware Detections**", unsafe_allow_html=True)
+        malware_samples = [
+            {"name": "Trojan.Generic", "hash": "a1b2c3d4e5f6789012345678901234567", "severity": "High"},
+            {"name": "Ransomware.Cryptolocker", "hash": "f1e2d3c4b5a6987654321098765432109", "severity": "Critical"},
+            {"name": "Backdoor.DarkComet", "hash": "5f4e3d2c1b0a98765432109876543210", "severity": "High"}
+        ]
+        
+        for malware in malware_samples:
+            severity_color = "#ff0000" if malware["severity"] == "Critical" else "#ff6600"
+            
+            st.markdown(f"""
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border: 1px solid {severity_color}; border-radius: 3px;'>
+                <strong>{malware['name']}</strong><br>
+                Hash: <code>{malware['hash']}</code><br>
+                Severity: <span style='color: {severity_color};'>{malware['severity']}</span>
+            </div>
+            """, unsafe_allow_html=True)
 
 def main():
-    # Initialize platform in session state
-    if 'platform' not in st.session_state:
-        st.session_state.platform = EnterpriseIAMPlatform()
+    # Initialize SOC terminal in session state
+    if 'soc_terminal' not in st.session_state:
+        st.session_state.soc_terminal = SOCOperationsTerminal()
     
     # Initialize login state
     if 'logged_in' not in st.session_state:
@@ -1075,13 +914,9 @@ def main():
     
     # Check if user is logged in
     if not st.session_state.logged_in:
-        login_page()
+        soc_login_page()
     else:
-        # Route to appropriate dashboard based on role
-        if st.session_state.user["role"] == "admin":
-            admin_dashboard()
-        else:
-            user_dashboard()
+        soc_dashboard()
 
 if __name__ == "__main__":
     main()
