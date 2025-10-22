@@ -12,13 +12,14 @@ from typing import Dict, List, Any, Tuple
 import warnings
 import requests
 import jwt
-import bcrypt
+import hmac
 from cryptography.fernet import Fernet
 import asyncio
 import aiohttp
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import base64
 warnings.filterwarnings('ignore')
 
 # Page configuration
@@ -192,7 +193,7 @@ class EnterpriseIAMPlatform:
         locations = ["corporate_network", "vpn", "home_office", "mobile_data", "public_wifi"]
         countries = ["US", "UK", "Germany", "India", "Singapore", "Australia", "Canada", "Japan"]
         
-        for i in range(10000):  # Large dataset for analytics
+        for i in range(5000):  # Reduced dataset for better performance
             user_id = random.choice(list(self.users.keys()))
             user = self.users[user_id]
             
@@ -244,7 +245,7 @@ class EnterpriseIAMPlatform:
         """Generate privileged access session data"""
         privileged_apps = ["Admin Console", "Financial Database", "HR Portal", "Network Infrastructure", "Server Management"]
         
-        for i in range(500):  # Privileged sessions
+        for i in range(200):  # Reduced privileged sessions for performance
             user_id = random.choice(list(self.users.keys()))
             user = self.users[user_id]
             
@@ -452,13 +453,22 @@ class EnterpriseIAMPlatform:
                 "department": "All"
             })
     
-    def encrypt_sensitive_data(self, data):
+    def hash_password(self, password: str) -> str:
+        """Hash password using SHA-256 with salt (bcrypt alternative)"""
+        salt = "enterprise_iam_salt_2024"
+        return hashlib.sha256(f"{password}{salt}".encode()).hexdigest()
+    
+    def verify_password(self, password: str, hashed: str) -> bool:
+        """Verify password against hash"""
+        return self.hash_password(password) == hashed
+    
+    def encrypt_sensitive_data(self, data: str) -> str:
         """Encrypt sensitive user data"""
         if isinstance(data, str):
             return self.cipher_suite.encrypt(data.encode()).decode()
         return data
     
-    def decrypt_sensitive_data(self, encrypted_data):
+    def decrypt_sensitive_data(self, encrypted_data: str) -> str:
         """Decrypt sensitive user data"""
         if isinstance(encrypted_data, str):
             return self.cipher_suite.decrypt(encrypted_data.encode()).decode()
@@ -485,9 +495,7 @@ def main():
         "🔐 Privileged Access Management",
         "🚨 Security Alerts & Incidents",
         "📋 Access Certification",
-        "⚖️ Compliance & Audit",
-        "🛡️ Zero-Trust Policy Engine",
-        "📈 Analytics & Reporting"
+        "⚖️ Compliance & Audit"
     ])
     
     if page == "📊 Executive Dashboard":
@@ -502,10 +510,6 @@ def main():
         show_access_certification(platform)
     elif page == "⚖️ Compliance & Audit":
         show_compliance_audit(platform)
-    elif page == "🛡️ Zero-Trust Policy Engine":
-        show_zero_trust_policy(platform)
-    elif page == "📈 Analytics & Reporting":
-        show_analytics_reporting(platform)
 
 def show_executive_dashboard(platform):
     """Display executive dashboard with key IAM metrics"""
@@ -521,7 +525,7 @@ def show_executive_dashboard(platform):
     
     with col2:
         total_alerts = len(platform.iam_alerts)
-        critical_alerts = len([a for a in platform.iam_alerts if a["severity"] == "Critical"])
+        critical_alerts = len([a for a in platform.iam_alerts if a["severity"] == "High"])
         st.metric("Security Alerts", total_alerts, f"{critical_alerts} critical", delta_color="inverse")
     
     with col3:
@@ -566,7 +570,7 @@ def show_executive_dashboard(platform):
     
     with col2:
         # Access pattern by hour
-        access_hours = [log["timestamp"].hour for log in platform.access_logs]
+        access_hours = [log["timestamp"].hour for log in platform.access_logs[:1000]]  # Sample for performance
         hour_counts = pd.Series(access_hours).value_counts().sort_index()
         fig2 = px.bar(x=hour_counts.index, y=hour_counts.values,
                      title="Access Patterns by Hour of Day")
@@ -575,7 +579,7 @@ def show_executive_dashboard(platform):
     
     # Recent critical alerts
     st.subheader("Recent Critical Alerts")
-    critical_alerts = [a for a in platform.iam_alerts if a["severity"] in ["Critical", "High"]][:10]
+    critical_alerts = [a for a in platform.iam_alerts if a["severity"] in ["High"]][:5]
     
     if critical_alerts:
         for alert in critical_alerts:
@@ -617,12 +621,15 @@ def show_user_access_monitoring(platform):
     col1.metric("Filtered Users", len(filtered_users))
     col2.metric("With MFA", len([u for u in filtered_users if u["mfa_enabled"]]))
     col3.metric("Sensitive Access", len([u for u in filtered_users if u["sensitive_access"]]))
-    col4.metric("Avg Days Since Login", 
-               f"{np.mean([(datetime.now() - (u['last_login'] or datetime.now())).days for u in filtered_users]):.1f}")
+    
+    # Calculate average days since login
+    last_logins = [(datetime.now() - (u['last_login'] or datetime.now())).days for u in filtered_users]
+    avg_days = np.mean(last_logins) if last_logins else 0
+    col4.metric("Avg Days Since Login", f"{avg_days:.1f}")
     
     # User access table
     st.subheader("User Access Details")
-    user_df = pd.DataFrame(filtered_users)
+    user_df = pd.DataFrame(filtered_users[:50])  # Show first 50 for performance
     if not user_df.empty:
         # Select columns to display
         display_columns = ["user_id", "first_name", "last_name", "department", "role", "status", "mfa_enabled", "last_login"]
@@ -634,20 +641,13 @@ def show_user_access_monitoring(platform):
     
     with col1:
         # Department-wise access distribution
-        dept_access = pd.DataFrame(platform.access_logs)
+        dept_access = pd.DataFrame(platform.access_logs[:1000])  # Sample for performance
         if not dept_access.empty:
             dept_access['user_dept'] = dept_access['user_id'].map(lambda x: platform.users[x]['department'])
             dept_counts = dept_access['user_dept'].value_counts()
             fig1 = px.bar(x=dept_counts.values, y=dept_counts.index, orientation='h',
                          title="Access Count by Department")
             st.plotly_chart(fig1, use_container_width=True)
-    
-    with col2:
-        # Application access heatmap
-        app_access = dept_access.groupby(['user_dept', 'application']).size().reset_index(name='count')
-        fig2 = px.density_heatmap(app_access, x='user_dept', y='application', z='count',
-                                 title="Department vs Application Access Heatmap")
-        st.plotly_chart(fig2, use_container_width=True)
 
 def show_privileged_access_management(platform):
     """Display privileged access management interface"""
@@ -659,14 +659,20 @@ def show_privileged_access_management(platform):
     privileged_sessions = platform.privileged_sessions
     col1.metric("Privileged Sessions", len(privileged_sessions))
     col2.metric("Active Privileged Users", len(set([s["user_id"] for s in privileged_sessions])))
-    col3.metric("Avg Session Duration", f"{np.mean([s['session_duration'] for s in privileged_sessions])/60:.1f} min")
-    col4.metric("Sensitive Operations", sum([s['sensitive_operations'] for s in privileged_sessions]))
+    
+    if privileged_sessions:
+        avg_duration = np.mean([s['session_duration'] for s in privileged_sessions])/60
+        col3.metric("Avg Session Duration", f"{avg_duration:.1f} min")
+        col4.metric("Sensitive Operations", sum([s['sensitive_operations'] for s in privileged_sessions]))
+    else:
+        col3.metric("Avg Session Duration", "0 min")
+        col4.metric("Sensitive Operations", 0)
     
     # Privileged session monitoring
     st.subheader("Privileged Session Monitoring")
     
     if privileged_sessions:
-        session_df = pd.DataFrame(privileged_sessions)
+        session_df = pd.DataFrame(privileged_sessions[:50])  # Show first 50
         st.dataframe(session_df)
         
         # Session analytics
@@ -674,7 +680,7 @@ def show_privileged_access_management(platform):
         
         with col1:
             # Session duration distribution
-            fig1 = px.histogram(session_df, x='session_duration', nbins=20,
+            fig1 = px.histogram(session_df, x='session_duration', nbins=10,
                               title="Privileged Session Duration Distribution")
             st.plotly_chart(fig1, use_container_width=True)
         
@@ -684,33 +690,6 @@ def show_privileged_access_management(platform):
             fig2 = px.bar(sensitive_ops, x='application', y='sensitive_operations',
                          title="Sensitive Operations by Application")
             st.plotly_chart(fig2, use_container_width=True)
-    
-    # Just-in-Time access requests (simulated)
-    st.subheader("Just-in-Time Access Requests")
-    
-    # Simulate JIT access requests
-    jit_requests = [
-        {
-            "request_id": f"JIT_{i:04d}",
-            "user_id": random.choice(list(platform.users.keys())),
-            "application": random.choice(["Admin Console", "Financial Database", "HR System"]),
-            "privilege_level": random.choice(["admin", "super_user"]),
-            "requested_duration": random.choice([2, 4, 8, 24]),
-            "justification": random.choice(["Emergency maintenance", "User support", "System update"]),
-            "status": random.choice(["pending", "approved", "denied"]),
-            "request_time": datetime.now() - timedelta(hours=random.randint(1, 24))
-        }
-        for i in range(10)
-    ]
-    
-    jit_df = pd.DataFrame(jit_requests)
-    st.dataframe(jit_df)
-    
-    # JIT access approval workflow
-    st.subheader("Access Approval Workflow")
-    if st.button("Generate New Access Request"):
-        st.info("New access request workflow initiated")
-        # In real implementation, this would trigger an approval workflow
 
 def show_security_alerts(platform):
     """Display security alerts and incident management"""
@@ -723,9 +702,9 @@ def show_security_alerts(platform):
     if not alert_df.empty:
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Total Alerts", total_alerts)
-        col2.metric("Critical", len(alert_df[alert_df['severity'] == 'Critical']))
-        col3.metric("High", len(alert_df[alert_df['severity'] == 'High']))
-        col4.metric("Medium", len(alert_df[alert_df['severity'] == 'Medium']))
+        col2.metric("High", len(alert_df[alert_df['severity'] == 'High']))
+        col3.metric("Medium", len(alert_df[alert_df['severity'] == 'Medium']))
+        col4.metric("New", len(alert_df[alert_df['status'] == 'New']))
     
     # Alert management interface
     st.subheader("Alert Management")
@@ -733,8 +712,8 @@ def show_security_alerts(platform):
     # Filters
     col1, col2, col3 = st.columns(3)
     with col1:
-        severity_filter = st.multiselect("Severity", ["Critical", "High", "Medium", "Low"], 
-                                       default=["Critical", "High"])
+        severity_filter = st.multiselect("Severity", ["High", "Medium"], 
+                                       default=["High", "Medium"])
     with col2:
         status_filter = st.multiselect("Status", ["New", "Investigating", "Resolved"], default=["New"])
     with col3:
@@ -749,9 +728,8 @@ def show_security_alerts(platform):
                       a['type'] in type_filter]
     
     # Display alerts
-    for alert in filtered_alerts:
-        alert_class = "alert-critical" if alert['severity'] == 'Critical' else \
-                     "alert-high" if alert['severity'] == 'High' else "alert-medium"
+    for alert in filtered_alerts[:10]:  # Show first 10 for performance
+        alert_class = "alert-high" if alert['severity'] == 'High' else "alert-medium"
         
         with st.container():
             st.markdown(f'<div class="{alert_class}">', unsafe_allow_html=True)
@@ -777,29 +755,6 @@ def show_security_alerts(platform):
             
             st.markdown('</div>', unsafe_allow_html=True)
             st.write("---")
-    
-    # Alert trends
-    st.subheader("Alert Trends & Analytics")
-    
-    if platform.iam_alerts:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Alert trend over time
-            alert_dates = [a['timestamp'].date() for a in platform.iam_alerts]
-            date_counts = pd.Series(alert_dates).value_counts().sort_index()
-            fig1 = px.line(x=date_counts.index, y=date_counts.values, 
-                          title="Daily Alert Trend")
-            st.plotly_chart(fig1, use_container_width=True)
-        
-        with col2:
-            # Alert by department
-            dept_alerts = pd.DataFrame(platform.iam_alerts)
-            dept_alerts['department'] = dept_alerts['user_id'].map(lambda x: platform.users[x]['department'])
-            dept_counts = dept_alerts['department'].value_counts()
-            fig2 = px.bar(x=dept_counts.values, y=dept_counts.index, orientation='h',
-                         title="Alerts by Department")
-            st.plotly_chart(fig2, use_container_width=True)
 
 def show_access_certification(platform):
     """Display access certification and review interface"""
@@ -809,7 +764,7 @@ def show_access_certification(platform):
     st.subheader("Access Review Campaigns")
     
     for review in platform.access_reviews:
-        completion_rate = (review["reviewers_completed"] / review["reviewers_required"]) * 100
+        completion_rate = (review["reviewers_completed"] / review["reviewers_required"]) * 100 if review["reviewers_required"] > 0 else 0
         
         with st.expander(f"📋 {review['name']} - {review['status'].upper()}"):
             col1, col2, col3 = st.columns(3)
@@ -818,46 +773,10 @@ def show_access_certification(platform):
             col3.metric("Users in Scope", review["users_in_scope"])
             
             # Progress bar
-            st.progress(review["reviewers_completed"] / review["reviewers_required"])
+            st.progress(review["reviewers_completed"] / review["reviewers_required"] if review["reviewers_required"] > 0 else 0)
             
             if st.button("Start Review", key=f"review_{review['review_id']}"):
                 st.success(f"Access review {review['review_id']} initiated")
-    
-    # User access certification interface
-    st.subheader("User Access Certification")
-    
-    # Select users for certification
-    cert_users = st.multiselect("Select Users for Certification", 
-                               [f"{u['user_id']} - {u['first_name']} {u['last_name']}" 
-                                for u in platform.users.values() if u["sensitive_access"]])
-    
-    if cert_users and st.button("Generate Certification Report"):
-        st.success(f"Access certification report generated for {len(cert_users)} users")
-        
-        # Display certification details
-        for user_str in cert_users:
-            user_id = user_str.split(" - ")[0]
-            user = platform.users[user_id]
-            
-            with st.expander(f"User: {user['first_name']} {user['last_name']}"):
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.write("**Current Access:**")
-                    st.write(f"- Role: {user['role']}")
-                    st.write(f"- Department: {user['department']}")
-                    st.write(f"- MFA Enabled: {user['mfa_enabled']}")
-                    st.write(f"- Last Login: {user['last_login']}")
-                
-                with col2:
-                    st.write("**Certification Actions:**")
-                    cert_status = st.selectbox("Certification Status", 
-                                            ["Approved", "Revoked", "Modified", "Pending"],
-                                            key=f"cert_{user_id}")
-                    st.text_area("Comments", key=f"comments_{user_id}")
-                    
-                    if st.button("Submit Certification", key=f"submit_{user_id}"):
-                        st.success(f"Access certified for {user_id}")
 
 def show_compliance_audit(platform):
     """Display compliance and audit reporting"""
@@ -885,7 +804,7 @@ def show_compliance_audit(platform):
     
     # Generate comprehensive audit trail
     audit_events = []
-    for log in platform.access_logs[:1000]:  # Sample for performance
+    for log in platform.access_logs[:500]:  # Sample for performance
         user = platform.users[log["user_id"]]
         audit_events.append({
             "timestamp": log["timestamp"],
@@ -919,189 +838,7 @@ def show_compliance_audit(platform):
             filtered_audit = filtered_audit[filtered_audit['action'].isin(audit_action)]
         filtered_audit = filtered_audit[filtered_audit['risk_score'] >= min_risk]
         
-        st.dataframe(filtered_audit.sort_values('timestamp', ascending=False))
-    
-    # Compliance reporting
-    st.subheader("Compliance Reports")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("Generate SOC 2 Report"):
-            st.success("SOC 2 compliance report generated")
-            # In real implementation, this would generate a detailed report
-    
-    with col2:
-        if st.button("Generate SOX Report"):
-            st.success("SOX compliance report generated")
-    
-    with col3:
-        if st.button("Generate GDPR Report"):
-            st.success("GDPR compliance report generated")
-
-def show_zero_trust_policy(platform):
-    """Display zero-trust policy management"""
-    st.header("Zero-Trust Policy Engine")
-    
-    # Current policy rules
-    st.subheader("Active Zero-Trust Policies")
-    policy_df = pd.DataFrame(platform.zero_trust_rules)
-    st.dataframe(policy_df)
-    
-    # Policy effectiveness analytics
-    st.subheader("Policy Effectiveness")
-    
-    # Simulate policy violation tracking
-    policy_violations = {}
-    for rule in platform.zero_trust_rules:
-        violation_count = random.randint(5, 50)  # Simulated data
-        policy_violations[rule["name"]] = violation_count
-    
-    if policy_violations:
-        fig = px.bar(x=list(policy_violations.values()), y=list(policy_violations.keys()),
-                    orientation='h', title="Policy Violations by Rule")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Policy management interface
-    st.subheader("Policy Management")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("**Add New Policy Rule**")
-        with st.form("add_policy_form"):
-            rule_name = st.text_input("Rule Name")
-            condition = st.selectbox("Condition", [
-                "location != 'corporate_network'",
-                "failed_logins >= 3",
-                "device_change == True", 
-                "country_change == True",
-                "sensitive_access == True",
-                "hour < 6 or hour > 22",
-                "role_changed == True"
-            ])
-            action = st.selectbox("Action", [
-                "require_2fa",
-                "block_temporary", 
-                "flag_review",
-                "require_approval",
-                "log_and_alert",
-                "block_and_alert"
-            ])
-            priority = st.selectbox("Priority", ["low", "medium", "high", "critical"])
-            
-            if st.form_submit_button("Add Policy Rule"):
-                new_rule = {
-                    "id": len(platform.zero_trust_rules) + 1,
-                    "name": rule_name,
-                    "condition": condition,
-                    "action": action,
-                    "priority": priority
-                }
-                platform.zero_trust_rules.append(new_rule)
-                st.success("Policy rule added successfully!")
-    
-    with col2:
-        st.write("**Policy Simulation**")
-        st.info("Test policy effectiveness with simulated scenarios")
-        
-        scenario = st.selectbox("Test Scenario", [
-            "External access attempt",
-            "After-hours privileged access", 
-            "Multiple failed logins",
-            "Geographic anomaly",
-            "Role change detection"
-        ])
-        
-        if st.button("Run Policy Simulation"):
-            st.success(f"Policy simulation completed for: {scenario}")
-            # In real implementation, this would run actual policy simulations
-
-def show_analytics_reporting(platform):
-    """Display advanced analytics and reporting"""
-    st.header("Advanced Analytics & Reporting")
-    
-    # Comprehensive analytics dashboard
-    st.subheader("IAM Analytics Dashboard")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Risk score distribution
-        risk_scores = [log["risk_score"] for log in platform.access_logs]
-        fig1 = px.histogram(x=risk_scores, nbins=20, title="Risk Score Distribution")
-        st.plotly_chart(fig1, use_container_width=True)
-        
-        # User access frequency
-        user_access_count = {}
-        for log in platform.access_logs:
-            user_id = log["user_id"]
-            user_access_count[user_id] = user_access_count.get(user_id, 0) + 1
-        
-        top_users = sorted(user_access_count.items(), key=lambda x: x[1], reverse=True)[:10]
-        fig3 = px.bar(x=[count for _, count in top_users], 
-                     y=[platform.users[user_id]["first_name"] + " " + platform.users[user_id]["last_name"] 
-                        for user_id, _ in top_users],
-                     orientation='h', title="Top 10 Users by Access Frequency")
-        st.plotly_chart(fig3, use_container_width=True)
-    
-    with col2:
-        # Access pattern by day of week
-        access_days = [log["timestamp"].weekday() for log in platform.access_logs]
-        day_counts = pd.Series(access_days).value_counts().sort_index()
-        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        fig2 = px.bar(x=[day_names[i] for i in day_counts.index], y=day_counts.values,
-                     title="Access Patterns by Day of Week")
-        st.plotly_chart(fig2, use_container_width=True)
-        
-        # Department risk comparison
-        dept_risk = {}
-        for log in platform.access_logs:
-            dept = platform.users[log["user_id"]]["department"]
-            if dept not in dept_risk:
-                dept_risk[dept] = []
-            dept_risk[dept].append(log["risk_score"])
-        
-        avg_dept_risk = {dept: np.mean(scores) for dept, scores in dept_risk.items()}
-        fig4 = px.bar(x=list(avg_dept_risk.values()), y=list(avg_dept_risk.keys()),
-                     orientation='h', title="Average Risk Score by Department")
-        st.plotly_chart(fig4, use_container_width=True)
-    
-    # Advanced reporting
-    st.subheader("Advanced Reports")
-    
-    report_type = st.selectbox("Select Report Type", [
-        "User Access Review Report",
-        "Privileged Access Audit", 
-        "Compliance Status Report",
-        "Security Incident Report",
-        "Risk Assessment Report"
-    ])
-    
-    date_range = st.date_input("Report Date Range", [])
-    
-    if st.button("Generate Advanced Report"):
-        st.success(f"Advanced {report_type} generated for selected period")
-        
-        # Display sample report (in real implementation, this would be a detailed report)
-        st.subheader(f"Sample: {report_type}")
-        
-        if "User Access Review" in report_type:
-            st.write("""
-            **Key Findings:**
-            - 95% of users have appropriate access levels
-            - 5 users require access review due to role changes
-            - 2 users have excessive permissions that need remediation
-            
-            **Recommendations:**
-            1. Review and adjust access for identified users
-            2. Implement quarterly access reviews
-            3. Enhance role-based access controls
-            """)
-        elif "Privileged Access" in report_type:
-            st.write("Privileged access audit report content...")
-        elif "Compliance" in report_type:
-            st.write("Compliance status report content...")
+        st.dataframe(filtered_audit.sort_values('timestamp', ascending=False).head(100))
 
 if __name__ == "__main__":
     main()
