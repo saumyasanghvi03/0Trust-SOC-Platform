@@ -18,6 +18,7 @@ import ipaddress
 import re
 import math
 import uuid
+import hashlib
 from streamlit_autorefresh import st_autorefresh
 
 warnings.filterwarnings('ignore')
@@ -153,7 +154,7 @@ st.markdown("""
         overflow-y: auto;
         margin: 10px 0;
     }
-    .radar-sweep {
+    .radar-container {
         position: relative;
         width: 100%;
         height: 300px;
@@ -161,6 +162,7 @@ st.markdown("""
         border: 2px solid #00ff00;
         border-radius: 50%;
         overflow: hidden;
+        margin: 20px 0;
     }
     .sweep-line {
         position: absolute;
@@ -179,9 +181,9 @@ st.markdown("""
         position: absolute;
         width: 12px;
         height: 12px;
-        background-color: #ff0000;
         border-radius: 50%;
         animation: threat-pulse 2s infinite;
+        transform: translate(-50%, -50%);
     }
     @keyframes threat-pulse {
         0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
@@ -293,6 +295,7 @@ class AdvancedCyberTerminal:
         self.last_update = datetime.now()
         self.live_data_running = False
         self.data_stream = LiveDataStream()
+        self.threat_positions = {}  # Store persistent threat positions
         self.initialize_cyber_terminal()
         
     def initialize_cyber_terminal(self):
@@ -367,8 +370,26 @@ class AdvancedCyberTerminal:
         self.generate_ids_alerts()
         self.generate_honeypot_data()
         
+        # Initialize threat positions
+        self._initialize_threat_positions()
+        
         # Start live data simulation
         self.start_live_data_simulation()
+    
+    def _initialize_threat_positions(self):
+        """Initialize positions for all current threats"""
+        for threat in self.live_threats:
+            threat_hash = hashlib.md5(threat["threat_id"].encode()).hexdigest()
+            if threat_hash not in self.threat_positions:
+                # Generate stable position based on threat ID
+                angle = (int(threat_hash[:8], 16) % 360) * (math.pi / 180)
+                distance = 0.3 + (int(threat_hash[8:16], 16) % 70) / 100
+                self.threat_positions[threat_hash] = {
+                    "angle": angle,
+                    "distance": distance,
+                    "threat_id": threat["threat_id"],
+                    "last_seen": datetime.now()
+                }
     
     def hash_password(self, password: str) -> str:
         """Hash password using SHA-256 with salt"""
@@ -412,6 +433,7 @@ class AdvancedCyberTerminal:
         self._refresh_threats()
         self._refresh_endpoints()
         self._refresh_alerts()
+        self._update_threat_positions()
         
         self.last_update = datetime.now()
     
@@ -429,7 +451,7 @@ class AdvancedCyberTerminal:
             })
             
         elif event["type"] == "threat_detected":
-            self.live_threats.append({
+            new_threat = {
                 "threat_id": f"THREAT-{len(self.live_threats)+1:06d}",
                 "type": event["threat_type"],
                 "severity": event["severity"],
@@ -441,7 +463,19 @@ class AdvancedCyberTerminal:
                 "indicators": [f"IOC-{random.randint(1000, 9999)}" for _ in range(random.randint(2, 5))],
                 "status": "Active",
                 "assigned_to": random.choice(list(self.cyber_team.keys()))
-            })
+            }
+            self.live_threats.append(new_threat)
+            
+            # Add to threat positions
+            threat_hash = hashlib.md5(new_threat["threat_id"].encode()).hexdigest()
+            angle = random.uniform(0, 2 * math.pi)
+            distance = random.uniform(0.2, 0.9)
+            self.threat_positions[threat_hash] = {
+                "angle": angle,
+                "distance": distance,
+                "threat_id": new_threat["threat_id"],
+                "last_seen": datetime.now()
+            }
             
         elif event["type"] == "ids_alert":
             self.ids_alerts.append({
@@ -457,6 +491,24 @@ class AdvancedCyberTerminal:
                 "protocol": random.choice(["TCP", "UDP", "HTTP"]),
                 "payload_info": f"Malicious payload detected"
             })
+    
+    def _update_threat_positions(self):
+        """Update threat positions for radar display"""
+        current_time = datetime.now()
+        
+        # Update existing threat positions (slight movement)
+        for threat_hash, position in list(self.threat_positions.items()):
+            # Slight random movement
+            position["angle"] += random.uniform(-0.1, 0.1)
+            position["distance"] += random.uniform(-0.02, 0.02)
+            position["distance"] = max(0.1, min(0.95, position["distance"]))
+            position["last_seen"] = current_time
+        
+        # Remove old threats that are no longer active
+        active_threat_ids = {threat["threat_id"] for threat in self.live_threats if threat["status"] == "Active"}
+        for threat_hash in list(self.threat_positions.keys()):
+            if self.threat_positions[threat_hash]["threat_id"] not in active_threat_ids:
+                del self.threat_positions[threat_hash]
     
     def _refresh_network_activity(self):
         """Refresh network activity with new data"""
@@ -490,6 +542,10 @@ class AdvancedCyberTerminal:
             if threat["status"] == "Active" and random.random() < 0.1:
                 threat["last_activity"] = datetime.now()
                 threat["confidence"] = min(99, threat["confidence"] + random.randint(-5, 5))
+                
+                # Occasionally change status
+                if random.random() < 0.05:
+                    threat["status"] = random.choice(["Contained", "Monitoring", "Active"])
     
     def _refresh_endpoints(self):
         """Refresh endpoint telemetry"""
@@ -678,18 +734,71 @@ class AdvancedCyberTerminal:
             return "CRITICAL", "#ff0000", score
     
     def get_threat_radar_data(self):
-        """Generate dynamic data for threat radar visualization"""
-        threats = []
-        for _ in range(random.randint(5, 12)):
-            angle = random.uniform(0, 2 * math.pi)
-            distance = random.uniform(0.2, 0.9)
-            severity = random.choice(["Low", "Medium", "High", "Critical"])
-            threats.append({
-                "angle": angle,
-                "distance": distance,
-                "severity": severity
-            })
-        return threats
+        """Get current threat positions for radar visualization"""
+        radar_data = []
+        
+        for threat_hash, position in self.threat_positions.items():
+            # Find the corresponding threat for severity information
+            threat_info = next((t for t in self.live_threats if t["threat_id"] == position["threat_id"]), None)
+            if threat_info and threat_info["status"] == "Active":
+                radar_data.append({
+                    "angle": position["angle"],
+                    "distance": position["distance"],
+                    "severity": threat_info["severity"],
+                    "threat_id": position["threat_id"],
+                    "threat_type": threat_info["type"]
+                })
+        
+        return radar_data
+
+def create_threat_radar(terminal):
+    """Create and display the threat radar visualization"""
+    threats = terminal.get_threat_radar_data()
+    
+    # Create radar HTML
+    radar_html = """
+    <div class="radar-container">
+        <div class="sweep-line"></div>
+    """
+    
+    # Add threat dots
+    for threat in threats:
+        # Convert polar coordinates to Cartesian for CSS positioning
+        angle = threat["angle"]
+        distance = threat["distance"]
+        
+        # Convert to percentage coordinates (center is 50%, 50%)
+        x = 50 + (distance * 40 * math.cos(angle))
+        y = 50 + (distance * 40 * math.sin(angle))
+        
+        # Set color based on severity
+        color = {
+            "Critical": "#ff0000",
+            "High": "#ff6600", 
+            "Medium": "#ffff00",
+            "Low": "#00ff00"
+        }.get(threat["severity"], "#ffff00")
+        
+        radar_html += f"""
+        <div class="threat-dot" 
+             style="left: {x}%; top: {y}%; background-color: {color};"
+             title="{threat['threat_type']} - {threat['severity']}">
+        </div>
+        """
+    
+    # Add concentric circles for radar range
+    for i in range(1, 4):
+        radius = i * 20
+        radar_html += f"""
+        <div style="position: absolute; width: {radius}%; height: {radius}%; 
+                    border: 1px solid rgba(0, 255, 0, 0.3); border-radius: 50%; 
+                    top: {(100 - radius) / 2}%; left: {(100 - radius) / 2}%;">
+        </div>
+        """
+    
+    radar_html += "</div>"
+    
+    return radar_html
 
 def cyber_login():
     """Display cyber terminal login"""
@@ -900,32 +1009,21 @@ def show_cyber_dashboard(terminal):
     
     with col1:
         st.markdown("### 🎯 LIVE THREAT RADAR")
+        st.markdown("**Active Threats Detected:**")
         
-        # Create radar container
-        radar_html = """
-        <div class='radar-sweep'>
-            <div class='sweep-line'></div>
-        """
-        
-        # Add dynamic threat dots
-        threats = terminal.get_threat_radar_data()
-        for threat in threats:
-            angle = threat["angle"]
-            distance = threat["distance"]
-            severity = threat["severity"]
-            
-            # Convert polar to Cartesian coordinates
-            x = 50 + (distance * 40 * math.cos(angle))
-            y = 50 + (distance * 40 * math.sin(angle))
-            
-            color = {"Critical": "#ff0000", "High": "#ff6600", "Medium": "#ffff00", "Low": "#00ff00"}[severity]
-            
-            radar_html += f"""
-            <div class='threat-dot' style='left: {x}%; top: {y}%; background-color: {color};'></div>
-            """
-        
-        radar_html += "</div>"
+        # Display the threat radar
+        radar_html = create_threat_radar(terminal)
         st.markdown(radar_html, unsafe_allow_html=True)
+        
+        # Radar legend
+        st.markdown("""
+        <div style='display: flex; justify-content: space-around; margin-top: 10px;'>
+            <div><span style='color: #ff0000;'>●</span> Critical</div>
+            <div><span style='color: #ff6600;'>●</span> High</div>
+            <div><span style='color: #ffff00;'>●</span> Medium</div>
+            <div><span style='color: #00ff00;'>●</span> Low</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("### 📡 REAL-TIME THREAT FEED")
@@ -946,9 +1044,10 @@ def show_cyber_dashboard(terminal):
                 time_diff = (datetime.now() - threat["last_activity"]).total_seconds()
                 is_new = time_diff < 30  # Highlight threats from last 30 seconds
                 new_indicator = " 🆕" if is_new else ""
+                stream_class = "live-data-stream" if is_new else ""
                 
                 st.markdown(f"""
-                <div class='log-entry live-data-stream'>
+                <div class='log-entry {stream_class}'>
                     <span style='color: {severity_color};'>[{threat['last_activity'].strftime('%H:%M:%S')}]</span>
                     {threat['type']} | Source: {threat['source_country']} | Confidence: {threat['confidence']}%{new_indicator}
                 </div>
@@ -979,96 +1078,7 @@ def show_cyber_dashboard(terminal):
             </div>
             """, unsafe_allow_html=True)
 
-def show_network_defense(terminal):
-    """Display real-time network defense module"""
-    st.markdown("## 🌐 NETWORK DEFENSE OPERATIONS")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 🛡️ LIVE FIREWALL STATUS")
-        
-        # Dynamic firewall rules and status
-        firewall_rules = [
-            {"rule": "SSH Access", "status": random.choice(["Blocked", "Allowed", "Restricted"]), "hits": random.randint(1000, 5000)},
-            {"rule": "Web Traffic", "status": random.choice(["Blocked", "Allowed", "Restricted"]), "hits": random.randint(50000, 100000)},
-            {"rule": "Database Access", "status": random.choice(["Blocked", "Allowed", "Restricted"]), "hits": random.randint(200, 1000)},
-            {"rule": "File Sharing", "status": random.choice(["Blocked", "Allowed", "Restricted"]), "hits": random.randint(500, 2000)},
-            {"rule": "Remote Desktop", "status": random.choice(["Blocked", "Allowed", "Restricted"]), "hits": random.randint(50, 500)}
-        ]
-        
-        for rule in firewall_rules:
-            status_color = "#00ff00" if rule["status"] == "Allowed" else "#ffff00" if rule["status"] == "Restricted" else "#ff0000"
-            st.markdown(f"""
-            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {status_color};'>
-                <strong>{rule['rule']}</strong> | Status: <span style='color: {status_color};'>{rule['status']}</span> | Hits: {rule['hits'] + random.randint(-10, 10)}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("### 📊 REAL-TIME TRAFFIC ANALYSIS")
-        
-        # Protocol distribution with live updates
-        protocols = {}
-        recent_activity = terminal.network_activity[-100:]  # Last 100 activities
-        for activity in recent_activity:
-            protocol = activity["protocol"]
-            protocols[protocol] = protocols.get(protocol, 0) + 1
-        
-        if protocols:
-            fig = px.pie(values=list(protocols.values()), names=list(protocols.keys()), 
-                        title="Live Protocol Distribution")
-            fig.update_layout(
-                paper_bgcolor='#1a1a1a',
-                plot_bgcolor='#1a1a1a',
-                font_color='#00ff00'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-    
-    # Real-time IDS/IPS Alerts
-    st.markdown("### 🚨 LIVE INTRUSION DETECTION")
-    
-    high_severity_alerts = [a for a in terminal.ids_alerts if a["severity"] in ["High", "Critical"]][:10]
-    
-    for alert in high_severity_alerts:
-        severity_color = "#ff0000" if alert["severity"] == "Critical" else "#ff6600"
-        
-        # Highlight recent alerts
-        time_diff = (datetime.now() - alert["timestamp"]).total_seconds()
-        is_recent = time_diff < 60  # Last minute
-        
-        recent_class = "live-data-stream" if is_recent else ""
-        
-        st.markdown(f"""
-        <div class='threat-panel {recent_class}'>
-            <strong>{alert['attack_type']}</strong> | 
-            Source: {alert['source_ip']} → Dest: {alert['dest_ip']} | 
-            Severity: <span style='color: {severity_color};'>{alert['severity']}</span> | 
-            Action: {alert['action_taken']} | 
-            Confidence: {alert['confidence']}%
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Live Network Defense Actions
-    st.markdown("### 🎯 ACTIVE DEFENSE MEASURES")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("🔒 BLOCK MALICIOUS IPs", use_container_width=True):
-            # Simulate blocking action
-            blocked_ips = [alert["source_ip"] for alert in terminal.ids_alerts[-5:]]
-            st.success(f"Blocked {len(blocked_ips)} malicious IPs")
-    
-    with col2:
-        if st.button("🛡️ ENABLE DDoS PROTECTION", use_container_width=True):
-            st.success("DDoS protection enabled - monitoring network traffic")
-    
-    with col3:
-        if st.button("📡 SCAN FOR VULNERABILITIES", use_container_width=True):
-            st.success("Network vulnerability scan initiated")
-
-# ... (Other module functions would follow similar real-time patterns)
+# ... (Other module functions remain the same as in the previous implementation)
 
 def main():
     # Initialize cyber terminal in session state
