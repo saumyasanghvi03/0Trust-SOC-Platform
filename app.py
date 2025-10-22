@@ -10,26 +10,19 @@ import time
 import random
 from typing import Dict, List, Any
 import warnings
-import requests
-import jwt
 from cryptography.fernet import Fernet
-import asyncio
-import aiohttp
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import base64
+import uuid
 warnings.filterwarnings('ignore')
 
 # Page configuration
 st.set_page_config(
-    page_title="Enterprise IAM Security Platform",
+    page_title="Enterprise IAM Platform",
     page_icon="🔐",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for professional enterprise look
+# Custom CSS
 st.markdown("""
 <style>
     .main-header {
@@ -44,12 +37,6 @@ st.markdown("""
         border-radius: 10px;
         border-left: 4px solid #1f77b4;
     }
-    .alert-critical {
-        background-color: #ffcccc;
-        padding: 0.5rem;
-        border-radius: 5px;
-        border-left: 4px solid #ff0000;
-    }
     .alert-high {
         background-color: #ffe6cc;
         padding: 0.5rem;
@@ -62,406 +49,160 @@ st.markdown("""
         border-radius: 5px;
         border-left: 4px solid #ffcc00;
     }
+    .ticket-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        background-color: #f9f9f9;
+    }
+    .app-card {
+        border: 1px solid #1f77b4;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        background-color: #e6f3ff;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 class EnterpriseIAMPlatform:
     def __init__(self):
-        self.initialize_enterprise_data()
         self.encryption_key = Fernet.generate_key()
         self.cipher_suite = Fernet(self.encryption_key)
+        self.initialize_enterprise_data()
     
     def initialize_enterprise_data(self):
         """Initialize comprehensive enterprise IAM data"""
-        # Enhanced role hierarchy with departments
-        self.departments = ["Finance", "HR", "IT", "Operations", "Sales", "Marketing", "R&D", "Legal"]
-        
-        self.roles = {
-            "super_admin": {
-                "permissions": ["all"], 
-                "risk_level": "critical",
-                "department": "IT",
-                "sensitive_access": True,
-                "mfa_required": True
-            },
-            "finance_manager": {
-                "permissions": ["financial_reports", "approve_payments", "view_salaries"],
-                "risk_level": "high",
-                "department": "Finance",
-                "sensitive_access": True,
-                "mfa_required": True
-            },
-            "hr_director": {
-                "permissions": ["employee_data", "salary_info", "performance_reviews"],
-                "risk_level": "high",
-                "department": "HR",
-                "sensitive_access": True,
-                "mfa_required": True
-            },
-            "developer": {
-                "permissions": ["code_access", "test_environments", "ci_cd"],
+        # Available applications
+        self.applications = {
+            "salesforce": {
+                "name": "Salesforce CRM",
+                "category": "CRM",
+                "description": "Customer relationship management platform",
                 "risk_level": "medium",
-                "department": "R&D",
-                "sensitive_access": False,
-                "mfa_required": True
+                "requires_approval": False
             },
-            "sales_rep": {
-                "permissions": ["crm_access", "sales_data", "customer_info"],
+            "workday": {
+                "name": "Workday HR",
+                "category": "HR",
+                "description": "Human resources management system",
+                "risk_level": "high",
+                "requires_approval": True
+            },
+            "sap": {
+                "name": "SAP ERP",
+                "category": "ERP",
+                "description": "Enterprise resource planning",
+                "risk_level": "high",
+                "requires_approval": True
+            },
+            "servicenow": {
+                "name": "ServiceNow",
+                "category": "ITSM",
+                "description": "IT service management",
                 "risk_level": "medium",
-                "department": "Sales",
-                "sensitive_access": False,
-                "mfa_required": True
+                "requires_approval": False
+            },
+            "slack": {
+                "name": "Slack",
+                "category": "Communication",
+                "description": "Team collaboration tool",
+                "risk_level": "low",
+                "requires_approval": False
+            },
+            "github": {
+                "name": "GitHub Enterprise",
+                "category": "Development",
+                "description": "Code repository and version control",
+                "risk_level": "medium",
+                "requires_approval": True
+            },
+            "tableau": {
+                "name": "Tableau",
+                "category": "Analytics",
+                "description": "Business intelligence and analytics",
+                "risk_level": "medium",
+                "requires_approval": False
+            },
+            "okta": {
+                "name": "Okta SSO",
+                "category": "Security",
+                "description": "Single sign-on and identity management",
+                "risk_level": "high",
+                "requires_approval": True
             }
         }
         
-        # Enhanced zero-trust rules for enterprise
-        self.zero_trust_rules = [
-            {"id": 1, "name": "External Access", "condition": "location != 'corporate_network'", "action": "require_2fa", "priority": "high"},
-            {"id": 2, "name": "After Hours Access", "condition": "hour < 6 or hour > 22", "action": "flag_review", "priority": "medium"},
-            {"id": 3, "name": "Multiple Failed Logins", "condition": "failed_logins >= 3", "action": "block_temporary", "priority": "critical"},
-            {"id": 4, "name": "New Device Access", "condition": "device_change == True", "action": "require_2fa", "priority": "high"},
-            {"id": 5, "name": "Sensitive Data Access", "condition": "sensitive_access == True", "action": "log_and_alert", "priority": "high"},
-            {"id": 6, "name": "Role Change Detection", "condition": "role_changed == True", "action": "require_approval", "priority": "high"},
-            {"id": 7, "name": "Geographic Anomaly", "condition": "country_change == True", "action": "block_and_alert", "priority": "critical"}
-        ]
+        # Departments
+        self.departments = ["Finance", "HR", "IT", "Operations", "Sales", "Marketing", "R&D", "Legal"]
         
-        # Generate enterprise user base
-        self.users = self.generate_enterprise_users()
-        self.access_logs = []
-        self.privileged_sessions = []
-        self.iam_alerts = []
-        self.access_reviews = []
-        self.compliance_checks = []
-        
-        # Generate initial data
-        self.generate_enterprise_access_logs()
-        self.generate_privileged_sessions()
-        self.run_iam_analytics()
-        self.schedule_access_reviews()
-    
-    def generate_enterprise_users(self):
-        """Generate realistic enterprise user base"""
-        users = {}
-        user_count = 200  # Reduced for better performance
-        
-        first_names = ["John", "Jane", "Robert", "Maria", "David", "Sarah", "Michael", "Lisa", 
-                      "James", "Jennifer", "William", "Elizabeth", "Richard", "Susan", "Joseph"]
-        last_names = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-                     "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson"]
-        
-        departments = self.departments
-        roles_list = list(self.roles.keys())
-        
-        for i in range(user_count):
-            user_id = f"emp_{i:05d}"
-            first_name = random.choice(first_names)
-            last_name = random.choice(last_names)
-            email = f"{first_name.lower()}.{last_name.lower()}@company.com"
-            department = random.choice(departments)
-            role = random.choice(roles_list)
-            
-            # Ensure role matches department
-            if role == "finance_manager" and department != "Finance":
-                role = random.choice([r for r in roles_list if "sales" in r.lower() or "developer" in r.lower()])
-            
-            users[user_id] = {
-                "user_id": user_id,
-                "first_name": first_name,
-                "last_name": last_name,
-                "email": email,
-                "department": department,
-                "role": role,
-                "hire_date": datetime.now() - timedelta(days=random.randint(30, 3650)),
+        # Predefined users (in real app, this would be from database)
+        self.users = {
+            "admin": {
+                "user_id": "admin",
+                "password": self.hash_password("admin123"),
+                "first_name": "System",
+                "last_name": "Administrator",
+                "email": "admin@company.com",
+                "department": "IT",
+                "role": "admin",
                 "status": "active",
+                "created_date": datetime.now() - timedelta(days=365),
                 "last_login": None,
-                "failed_login_attempts": 0,
-                "mfa_enabled": random.random() > 0.3,  # 70% MFA adoption
-                "sensitive_access": self.roles[role]["sensitive_access"]
+                "assigned_apps": list(self.applications.keys())  # Admin has all apps
+            },
+            "user001": {
+                "user_id": "user001",
+                "password": self.hash_password("user123"),
+                "first_name": "John",
+                "last_name": "Smith",
+                "email": "john.smith@company.com",
+                "department": "Sales",
+                "role": "user",
+                "status": "active",
+                "created_date": datetime.now() - timedelta(days=180),
+                "last_login": None,
+                "assigned_apps": ["salesforce", "slack", "tableau"]
+            },
+            "user002": {
+                "user_id": "user002",
+                "password": self.hash_password("user123"),
+                "first_name": "Sarah",
+                "last_name": "Johnson",
+                "email": "sarah.johnson@company.com",
+                "department": "HR",
+                "role": "user",
+                "status": "active",
+                "created_date": datetime.now() - timedelta(days=150),
+                "last_login": None,
+                "assigned_apps": ["workday", "slack", "servicenow"]
+            },
+            "user003": {
+                "user_id": "user003",
+                "password": self.hash_password("user123"),
+                "first_name": "Mike",
+                "last_name": "Chen",
+                "email": "mike.chen@company.com",
+                "department": "R&D",
+                "role": "user",
+                "status": "active",
+                "created_date": datetime.now() - timedelta(days=120),
+                "last_login": None,
+                "assigned_apps": ["github", "slack", "servicenow"]
             }
+        }
         
-        return users
-    
-    def generate_enterprise_access_logs(self):
-        """Generate comprehensive access logs for enterprise monitoring"""
-        applications = [
-            "ERP System", "CRM Platform", "HR Portal", "Financial Database", 
-            "Code Repository", "File Shares", "Email System", "Admin Console",
-            "BI Dashboard", "Project Management", "Customer Database", "Internal Wiki"
-        ]
-        
-        locations = ["corporate_network", "vpn", "home_office", "mobile_data", "public_wifi"]
-        countries = ["US", "UK", "Germany", "India", "Singapore", "Australia", "Canada", "Japan"]
-        
-        for i in range(2000):  # Reduced dataset for better performance
-            user_id = random.choice(list(self.users.keys()))
-            user = self.users[user_id]
-            
-            # Generate realistic timestamp (last 90 days)
-            timestamp = datetime.now() - timedelta(
-                days=random.randint(0, 90),
-                hours=random.randint(0, 23),
-                minutes=random.randint(0, 59)
-            )
-            
-            application = random.choice(applications)
-            location = random.choice(locations)
-            country = random.choice(countries)
-            
-            # Generate access event
-            access_event = {
-                "log_id": f"access_{i:08d}",
-                "user_id": user_id,
-                "timestamp": timestamp,
-                "application": application,
-                "action": random.choice(["login", "view", "modify", "download", "upload", "delete"]),
-                "resource": f"{application}_{random.randint(1, 100)}",
-                "location": location,
-                "country": country,
-                "ip_address": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "device_type": random.choice(["laptop", "desktop", "mobile", "tablet"]),
-                "success": random.random() > 0.05,  # 95% success rate
-                "risk_score": random.randint(0, 100),
-                "session_duration": random.randint(60, 3600) if random.random() > 0.3 else 0
-            }
-            
-            # Update user last login
-            if access_event["action"] == "login" and access_event["success"]:
-                self.users[user_id]["last_login"] = timestamp
-                self.users[user_id]["failed_login_attempts"] = 0
-            elif access_event["action"] == "login" and not access_event["success"]:
-                self.users[user_id]["failed_login_attempts"] += 1
-            
-            self.access_logs.append(access_event)
-    
-    def generate_privileged_sessions(self):
-        """Generate privileged access session data"""
-        privileged_apps = ["Admin Console", "Financial Database", "HR Portal", "Network Infrastructure", "Server Management"]
-        
-        for i in range(100):  # Reduced privileged sessions for performance
-            user_id = random.choice(list(self.users.keys()))
-            user = self.users[user_id]
-            
-            if not user["sensitive_access"]:
-                continue
-                
-            timestamp = datetime.now() - timedelta(
-                days=random.randint(0, 30),
-                hours=random.randint(0, 23)
-            )
-            
-            session = {
-                "session_id": f"priv_{i:06d}",
-                "user_id": user_id,
-                "timestamp": timestamp,
-                "application": random.choice(privileged_apps),
-                "privilege_level": random.choice(["admin", "super_user", "root"]),
-                "actions_performed": random.randint(1, 50),
-                "session_duration": random.randint(300, 7200),
-                "sensitive_operations": random.randint(0, 10),
-                "justification": random.choice(["routine_maintenance", "user_support", "system_update", "security_patch"]),
-                "approver": f"manager_{random.randint(1, 50)}"
-            }
-            
-            self.privileged_sessions.append(session)
-    
-    def run_iam_analytics(self):
-        """Run comprehensive IAM analytics and threat detection"""
+        # Access requests and tickets
+        self.access_requests = []
+        self.support_tickets = []
+        self.access_logs = []
         self.iam_alerts = []
         
-        # User behavior analytics
-        user_activities = {}
-        for log in self.access_logs:
-            user_id = log["user_id"]
-            if user_id not in user_activities:
-                user_activities[user_id] = []
-            user_activities[user_id].append(log)
-        
-        # Detect anomalies
-        for user_id, activities in user_activities.items():
-            user = self.users[user_id]
-            alerts = self.analyze_user_behavior(user, activities)
-            self.iam_alerts.extend(alerts)
-        
-        # Privileged access monitoring
-        for session in self.privileged_sessions:
-            alerts = self.analyze_privileged_access(session)
-            self.iam_alerts.extend(alerts)
-        
-        # Compliance checks
-        self.run_compliance_checks()
-    
-    def analyze_user_behavior(self, user, activities):
-        """Analyze user behavior for anomalies"""
-        alerts = []
-        
-        # Recent activities (last 7 days)
-        recent_activities = [a for a in activities if a["timestamp"] > datetime.now() - timedelta(days=7)]
-        
-        if not recent_activities:
-            return alerts
-        
-        # Failed login analysis
-        failed_logins = [a for a in recent_activities if a["action"] == "login" and not a["success"]]
-        if len(failed_logins) >= 3:
-            alerts.append({
-                "alert_id": f"alert_{len(self.iam_alerts) + len(alerts):06d}",
-                "timestamp": datetime.now(),
-                "type": "Multiple Failed Logins",
-                "severity": "High",
-                "user_id": user["user_id"],
-                "description": f"User {user['first_name']} {user['last_name']} has {len(failed_logins)} failed login attempts in 7 days",
-                "department": user["department"],
-                "status": "New",
-                "recommended_action": "Temporary account lockout and user verification"
-            })
-        
-        # Geographic anomalies
-        countries = [a["country"] for a in recent_activities if a["action"] == "login" and a["success"]]
-        if len(set(countries)) > 2:  # Access from more than 2 countries
-            alerts.append({
-                "alert_id": f"alert_{len(self.iam_alerts) + len(alerts):06d}",
-                "timestamp": datetime.now(),
-                "type": "Geographic Anomaly",
-                "severity": "Medium",
-                "user_id": user["user_id"],
-                "description": f"User accessed from {len(set(countries))} different countries in 7 days",
-                "department": user["department"],
-                "status": "New",
-                "recommended_action": "Verify travel schedule or require additional authentication"
-            })
-        
-        # After-hours access pattern
-        after_hours_access = [a for a in recent_activities 
-                            if a["action"] == "login" and a["success"] 
-                            and (a["timestamp"].hour < 6 or a["timestamp"].hour > 22)]
-        
-        if len(after_hours_access) > len(recent_activities) * 0.3:  # 30% after hours
-            alerts.append({
-                "alert_id": f"alert_{len(self.iam_alerts) + len(alerts):06d}",
-                "timestamp": datetime.now(),
-                "type": "Unusual Access Hours",
-                "severity": "Medium",
-                "user_id": user["user_id"],
-                "description": "Significant after-hours access pattern detected",
-                "department": user["department"],
-                "status": "New",
-                "recommended_action": "Review work schedule and access needs"
-            })
-        
-        return alerts
-    
-    def analyze_privileged_access(self, session):
-        """Analyze privileged access sessions"""
-        alerts = []
-        user = self.users[session["user_id"]]
-        
-        # Long privileged sessions
-        if session["session_duration"] > 3600:  # More than 1 hour
-            alerts.append({
-                "alert_id": f"alert_{len(self.iam_alerts) + len(alerts):06d}",
-                "timestamp": datetime.now(),
-                "type": "Extended Privileged Session",
-                "severity": "Medium",
-                "user_id": user["user_id"],
-                "description": f"Privileged session lasted {session['session_duration']//60} minutes",
-                "department": user["department"],
-                "status": "New",
-                "recommended_action": "Review session logs for unusual activity"
-            })
-        
-        # High number of sensitive operations
-        if session["sensitive_operations"] > 5:
-            alerts.append({
-                "alert_id": f"alert_{len(self.iam_alerts) + len(alerts):06d}",
-                "timestamp": datetime.now(),
-                "type": "High Sensitive Operations",
-                "severity": "High",
-                "user_id": user["user_id"],
-                "description": f"Performed {session['sensitive_operations']} sensitive operations in one session",
-                "department": user["department"],
-                "status": "New",
-                "recommended_action": "Immediate review and potential session termination"
-            })
-        
-        return alerts
-    
-    def run_compliance_checks(self):
-        """Run compliance and policy checks"""
-        self.compliance_checks = []
-        
-        # MFA compliance check
-        users_without_mfa = [user for user in self.users.values() 
-                           if user["sensitive_access"] and not user["mfa_enabled"]]
-        
-        if users_without_mfa:
-            self.compliance_checks.append({
-                "check_id": "COMP_001",
-                "name": "MFA for Sensitive Access",
-                "status": "FAIL",
-                "description": f"{len(users_without_mfa)} users with sensitive access lack MFA",
-                "severity": "High",
-                "remediation": "Enable MFA for all sensitive access users"
-            })
-        else:
-            self.compliance_checks.append({
-                "check_id": "COMP_001",
-                "name": "MFA for Sensitive Access",
-                "status": "PASS",
-                "description": "All users with sensitive access have MFA enabled",
-                "severity": "High",
-                "remediation": "None required"
-            })
-        
-        # Password policy check (simulated)
-        self.compliance_checks.append({
-            "check_id": "COMP_002",
-            "name": "Password Policy Enforcement",
-            "status": "PASS",
-            "description": "All users comply with password complexity requirements",
-            "severity": "Medium",
-            "remediation": "None required"
-        })
-        
-        # Access review compliance
-        overdue_reviews = [r for r in self.access_reviews if r["status"] == "overdue"]
-        if overdue_reviews:
-            self.compliance_checks.append({
-                "check_id": "COMP_003",
-                "name": "Access Review Timeliness",
-                "status": "FAIL",
-                "description": f"{len(overdue_reviews)} access reviews are overdue",
-                "severity": "Medium",
-                "remediation": "Complete pending access reviews"
-            })
-        else:
-            self.compliance_checks.append({
-                "check_id": "COMP_003",
-                "name": "Access Review Timeliness",
-                "status": "PASS",
-                "description": "All access reviews are up to date",
-                "severity": "Medium",
-                "remediation": "None required"
-            })
-    
-    def schedule_access_reviews(self):
-        """Schedule and manage access reviews"""
-        # Generate quarterly access reviews
-        quarters = ["Q1", "Q2", "Q3", "Q4"]
-        current_year = datetime.now().year
-        
-        for quarter in quarters:
-            due_date = datetime(current_year, (quarters.index(quarter) + 1) * 3, 30)
-            
-            self.access_reviews.append({
-                "review_id": f"REV_{quarter}_{current_year}",
-                "name": f"{quarter} {current_year} Access Review",
-                "due_date": due_date,
-                "status": "pending" if due_date > datetime.now() else "overdue",
-                "reviewers_required": 3,
-                "reviewers_completed": random.randint(0, 3),
-                "users_in_scope": len([u for u in self.users.values() if u["sensitive_access"]]),
-                "department": "All"
-            })
+        # Generate some initial data
+        self.generate_initial_access_requests()
+        self.generate_initial_tickets()
+        self.generate_access_logs()
     
     def hash_password(self, password: str) -> str:
         """Hash password using SHA-256 with salt"""
@@ -472,403 +213,843 @@ class EnterpriseIAMPlatform:
         """Verify password against hash"""
         return self.hash_password(password) == hashed
     
-    def encrypt_sensitive_data(self, data: str) -> str:
-        """Encrypt sensitive user data"""
-        if isinstance(data, str):
-            return self.cipher_suite.encrypt(data.encode()).decode()
-        return data
+    def authenticate_user(self, username: str, password: str) -> bool:
+        """Authenticate user credentials"""
+        if username in self.users:
+            user = self.users[username]
+            if user["status"] == "active" and self.verify_password(password, user["password"]):
+                # Update last login
+                self.users[username]["last_login"] = datetime.now()
+                return True
+        return False
     
-    def decrypt_sensitive_data(self, encrypted_data: str) -> str:
-        """Decrypt sensitive user data"""
-        if isinstance(encrypted_data, str):
-            return self.cipher_suite.decrypt(encrypted_data.encode()).decode()
-        return encrypted_data
+    def generate_initial_access_requests(self):
+        """Generate some initial access requests"""
+        requests_data = [
+            {"user_id": "user001", "app_id": "github", "status": "pending", "reason": "Need access for project development"},
+            {"user_id": "user002", "app_id": "tableau", "status": "approved", "reason": "HR analytics reporting"},
+            {"user_id": "user003", "app_id": "sap", "status": "rejected", "reason": "No business justification provided"}
+        ]
+        
+        for req_data in requests_data:
+            request_id = f"req_{len(self.access_requests) + 1:06d}"
+            self.access_requests.append({
+                "request_id": request_id,
+                "user_id": req_data["user_id"],
+                "app_id": req_data["app_id"],
+                "app_name": self.applications[req_data["app_id"]]["name"],
+                "status": req_data["status"],
+                "reason": req_data["reason"],
+                "submitted_date": datetime.now() - timedelta(days=random.randint(1, 30)),
+                "reviewed_date": datetime.now() - timedelta(days=random.randint(1, 15)) if req_data["status"] != "pending" else None,
+                "reviewed_by": "admin" if req_data["status"] != "pending" else None
+            })
+    
+    def generate_initial_tickets(self):
+        """Generate some initial support tickets"""
+        tickets_data = [
+            {"user_id": "user001", "subject": "Cannot login to Salesforce", "priority": "high", "status": "open"},
+            {"user_id": "user002", "subject": "Workday access issue", "priority": "medium", "status": "in_progress"},
+            {"user_id": "user003", "subject": "GitHub 2FA reset", "priority": "high", "status": "resolved"}
+        ]
+        
+        for ticket_data in tickets_data:
+            ticket_id = f"tkt_{len(self.support_tickets) + 1:06d}"
+            self.support_tickets.append({
+                "ticket_id": ticket_id,
+                "user_id": ticket_data["user_id"],
+                "subject": ticket_data["subject"],
+                "description": f"Detailed description for {ticket_data['subject']}",
+                "priority": ticket_data["priority"],
+                "status": ticket_data["status"],
+                "category": "access_issue",
+                "created_date": datetime.now() - timedelta(days=random.randint(1, 20)),
+                "assigned_to": "admin",
+                "last_updated": datetime.now() - timedelta(days=random.randint(1, 10))
+            })
+    
+    def generate_access_logs(self):
+        """Generate access logs for monitoring"""
+        for i in range(1000):
+            user_id = random.choice(list(self.users.keys()))
+            user = self.users[user_id]
+            
+            # Only log access for assigned apps
+            if not user["assigned_apps"]:
+                continue
+                
+            app_id = random.choice(user["assigned_apps"])
+            
+            timestamp = datetime.now() - timedelta(
+                days=random.randint(0, 90),
+                hours=random.randint(0, 23),
+                minutes=random.randint(0, 59)
+            )
+            
+            access_event = {
+                "log_id": f"log_{i:08d}",
+                "user_id": user_id,
+                "app_id": app_id,
+                "app_name": self.applications[app_id]["name"],
+                "timestamp": timestamp,
+                "action": random.choice(["login", "view", "modify", "download"]),
+                "ip_address": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
+                "location": random.choice(["corporate_network", "vpn", "home_office", "mobile"]),
+                "success": random.random() > 0.05,  # 95% success rate
+                "risk_score": random.randint(0, 100)
+            }
+            
+            self.access_logs.append(access_event)
+    
+    def create_access_request(self, user_id: str, app_id: str, reason: str) -> str:
+        """Create a new access request"""
+        request_id = f"req_{len(self.access_requests) + 1:06d}"
+        
+        request = {
+            "request_id": request_id,
+            "user_id": user_id,
+            "app_id": app_id,
+            "app_name": self.applications[app_id]["name"],
+            "status": "pending",
+            "reason": reason,
+            "submitted_date": datetime.now(),
+            "reviewed_date": None,
+            "reviewed_by": None
+        }
+        
+        self.access_requests.append(request)
+        return request_id
+    
+    def create_support_ticket(self, user_id: str, subject: str, description: str, priority: str, category: str) -> str:
+        """Create a new support ticket"""
+        ticket_id = f"tkt_{len(self.support_tickets) + 1:06d}"
+        
+        ticket = {
+            "ticket_id": ticket_id,
+            "user_id": user_id,
+            "subject": subject,
+            "description": description,
+            "priority": priority,
+            "status": "open",
+            "category": category,
+            "created_date": datetime.now(),
+            "assigned_to": "admin",
+            "last_updated": datetime.now()
+        }
+        
+        self.support_tickets.append(ticket)
+        return ticket_id
+    
+    def assign_application(self, user_id: str, app_id: str) -> bool:
+        """Assign application access to user"""
+        if user_id in self.users and app_id in self.applications:
+            if app_id not in self.users[user_id]["assigned_apps"]:
+                self.users[user_id]["assigned_apps"].append(app_id)
+                return True
+        return False
+    
+    def revoke_application(self, user_id: str, app_id: str) -> bool:
+        """Revoke application access from user"""
+        if user_id in self.users and app_id in self.applications:
+            if app_id in self.users[user_id]["assigned_apps"]:
+                self.users[user_id]["assigned_apps"].remove(app_id)
+                return True
+        return False
+    
+    def process_access_request(self, request_id: str, action: str, reviewed_by: str) -> bool:
+        """Process an access request (approve/reject)"""
+        for request in self.access_requests:
+            if request["request_id"] == request_id and request["status"] == "pending":
+                request["status"] = action
+                request["reviewed_date"] = datetime.now()
+                request["reviewed_by"] = reviewed_by
+                
+                if action == "approved":
+                    self.assign_application(request["user_id"], request["app_id"])
+                
+                return True
+        return False
+    
+    def update_ticket_status(self, ticket_id: str, status: str, updated_by: str) -> bool:
+        """Update support ticket status"""
+        for ticket in self.support_tickets:
+            if ticket["ticket_id"] == ticket_id:
+                ticket["status"] = status
+                ticket["last_updated"] = datetime.now()
+                return True
+        return False
 
-def main():
-    st.markdown('<div class="main-header">🔐 Enterprise IAM Security Platform</div>', unsafe_allow_html=True)
-    st.markdown("### Comprehensive Identity & Access Management Monitoring & Analytics")
+def login_page():
+    """Display login page"""
+    st.markdown('<div class="main-header">🔐 Enterprise IAM Platform</div>', unsafe_allow_html=True)
+    st.markdown("### Identity and Access Management System")
     
-    # Initialize session state
-    if 'iam_platform' not in st.session_state:
-        st.session_state.iam_platform = EnterpriseIAMPlatform()
+    col1, col2 = st.columns([1, 1])
     
-    platform = st.session_state.iam_platform
+    with col1:
+        st.image("https://img.icons8.com/color/96/000000/security-checked.png", width=100)
     
-    # Enhanced sidebar with enterprise sections
-    st.sidebar.image("https://img.icons8.com/color/96/000000/security-checked.png", width=80)
-    st.sidebar.title("IAM Security Command Center")
+    with col2:
+        with st.form("login_form"):
+            st.subheader("Login")
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            login_button = st.form_submit_button("Login")
+            
+            if login_button:
+                if username and password:
+                    platform = st.session_state.platform
+                    if platform.authenticate_user(username, password):
+                        st.session_state.user = platform.users[username]
+                        st.session_state.logged_in = True
+                        st.success("Login successful!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid username or password")
+                else:
+                    st.warning("Please enter both username and password")
     
-    # Navigation
+    # Demo credentials
+    st.markdown("---")
+    st.subheader("Demo Credentials")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("**Admin Access:**")
+        st.write("Username: `admin`")
+        st.write("Password: `admin123`")
+    
+    with col2:
+        st.write("**User Access:**")
+        st.write("Username: `user001`")
+        st.write("Password: `user123`")
+        st.write("Username: `user002`")
+        st.write("Password: `user123`")
+
+def admin_dashboard():
+    """Display admin dashboard"""
+    platform = st.session_state.platform
+    user = st.session_state.user
+    
+    st.sidebar.title(f"👋 Welcome, {user['first_name']}")
+    st.sidebar.markdown(f"**Role:** {user['role'].title()}")
+    st.sidebar.markdown(f"**Department:** {user['department']}")
+    
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state.logged_in = False
+        st.session_state.user = None
+        st.rerun()
+    
+    # Admin navigation
     page = st.sidebar.radio("Navigation", [
-        "📊 Executive Dashboard",
-        "👥 User Access Monitoring", 
-        "🔐 Privileged Access Management",
-        "🚨 Security Alerts & Incidents",
-        "📋 Access Certification",
-        "⚖️ Compliance & Audit"
+        "📊 Dashboard",
+        "👥 User Management", 
+        "🔐 Access Control",
+        "📋 Access Requests",
+        "🎫 Support Tickets",
+        "📈 Analytics & Reports"
     ])
     
-    if page == "📊 Executive Dashboard":
-        show_executive_dashboard(platform)
-    elif page == "👥 User Access Monitoring":
-        show_user_access_monitoring(platform)
-    elif page == "🔐 Privileged Access Management":
-        show_privileged_access_management(platform)
-    elif page == "🚨 Security Alerts & Incidents":
-        show_security_alerts(platform)
-    elif page == "📋 Access Certification":
-        show_access_certification(platform)
-    elif page == "⚖️ Compliance & Audit":
-        show_compliance_audit(platform)
+    if page == "📊 Dashboard":
+        show_admin_dashboard(platform)
+    elif page == "👥 User Management":
+        show_user_management(platform)
+    elif page == "🔐 Access Control":
+        show_access_control(platform)
+    elif page == "📋 Access Requests":
+        show_access_requests(platform)
+    elif page == "🎫 Support Tickets":
+        show_support_tickets(platform)
+    elif page == "📈 Analytics & Reports":
+        show_analytics_reports(platform)
 
-def show_executive_dashboard(platform):
-    """Display executive dashboard with key IAM metrics"""
-    st.header("Executive Security Dashboard")
+def user_dashboard():
+    """Display user dashboard"""
+    platform = st.session_state.platform
+    user = st.session_state.user
     
-    # Top-level KPIs
+    st.sidebar.title(f"👋 Welcome, {user['first_name']}")
+    st.sidebar.markdown(f"**Role:** {user['role'].title()}")
+    st.sidebar.markdown(f"**Department:** {user['department']}")
+    
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state.logged_in = False
+        st.session_state.user = None
+        st.rerun()
+    
+    # User navigation
+    page = st.sidebar.radio("Navigation", [
+        "🏠 My Dashboard",
+        "📱 My Applications", 
+        "🔐 Request Access",
+        "🎫 My Tickets",
+        "📊 My Activity"
+    ])
+    
+    if page == "🏠 My Dashboard":
+        show_user_dashboard(platform)
+    elif page == "📱 My Applications":
+        show_my_applications(platform)
+    elif page == "🔐 Request Access":
+        show_request_access(platform)
+    elif page == "🎫 My Tickets":
+        show_my_tickets(platform)
+    elif page == "📊 My Activity":
+        show_my_activity(platform)
+
+def show_admin_dashboard(platform):
+    """Display admin dashboard overview"""
+    st.header("Admin Dashboard")
+    
+    # KPI Metrics
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         total_users = len(platform.users)
-        active_users = len([u for u in platform.users.values() if u["status"] == "active"])
-        st.metric("Total Users", total_users, f"{active_users} active")
+        st.metric("Total Users", total_users)
     
     with col2:
-        total_alerts = len(platform.iam_alerts)
-        critical_alerts = len([a for a in platform.iam_alerts if a["severity"] == "High"])
-        st.metric("Security Alerts", total_alerts, f"{critical_alerts} high", delta_color="inverse")
+        pending_requests = len([r for r in platform.access_requests if r["status"] == "pending"])
+        st.metric("Pending Requests", pending_requests, delta_color="inverse")
     
     with col3:
-        privileged_users = len([u for u in platform.users.values() if u["sensitive_access"]])
-        st.metric("Privileged Users", privileged_users)
+        open_tickets = len([t for t in platform.support_tickets if t["status"] == "open"])
+        st.metric("Open Tickets", open_tickets, delta_color="inverse")
     
     with col4:
-        mfa_coverage = len([u for u in platform.users.values() if u["mfa_enabled"]]) / len(platform.users) * 100
-        st.metric("MFA Coverage", f"{mfa_coverage:.1f}%")
+        total_apps = len(platform.applications)
+        st.metric("Managed Applications", total_apps)
     
-    # Second row of metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        failed_logins = len([log for log in platform.access_logs if log["action"] == "login" and not log["success"]])
-        st.metric("Failed Logins", failed_logins)
-    
-    with col2:
-        compliance_status = len([c for c in platform.compliance_checks if c["status"] == "PASS"])
-        total_checks = len(platform.compliance_checks)
-        st.metric("Compliance", f"{compliance_status}/{total_checks}", "Checks Passed")
-    
-    with col3:
-        access_reviews_due = len([r for r in platform.access_reviews if r["status"] == "overdue"])
-        st.metric("Overdue Reviews", access_reviews_due, delta_color="inverse")
-    
-    with col4:
-        if platform.access_logs:
-            avg_risk_score = np.mean([log["risk_score"] for log in platform.access_logs])
-            st.metric("Average Risk Score", f"{avg_risk_score:.1f}")
-        else:
-            st.metric("Average Risk Score", "0.0")
-    
-    # Charts and visualizations
+    # Recent activity
     col1, col2 = st.columns(2)
     
     with col1:
-        # Alert severity distribution
-        if platform.iam_alerts:
-            alert_df = pd.DataFrame(platform.iam_alerts)
-            severity_counts = alert_df['severity'].value_counts()
-            fig1 = px.pie(values=severity_counts.values, names=severity_counts.index,
-                         title="Security Alert Severity Distribution")
-            st.plotly_chart(fig1, use_container_width=True)
+        st.subheader("Recent Access Requests")
+        recent_requests = sorted(platform.access_requests, key=lambda x: x["submitted_date"], reverse=True)[:5]
+        if recent_requests:
+            for req in recent_requests:
+                status_color = "🟡" if req["status"] == "pending" else "🟢" if req["status"] == "approved" else "🔴"
+                st.write(f"{status_color} **{req['user_id']}** - {req['app_name']} - *{req['status']}*")
         else:
-            st.info("No alerts generated yet.")
+            st.info("No access requests")
     
     with col2:
-        # Access pattern by hour
-        if platform.access_logs:
-            access_hours = [log["timestamp"].hour for log in platform.access_logs[:500]]
-            hour_counts = pd.Series(access_hours).value_counts().sort_index()
-            fig2 = px.bar(x=hour_counts.index, y=hour_counts.values,
-                         title="Access Patterns by Hour of Day")
-            fig2.update_layout(xaxis_title="Hour of Day", yaxis_title="Access Count")
-            st.plotly_chart(fig2, use_container_width=True)
+        st.subheader("Recent Support Tickets")
+        recent_tickets = sorted(platform.support_tickets, key=lambda x: x["created_date"], reverse=True)[:5]
+        if recent_tickets:
+            for ticket in recent_tickets:
+                priority_color = "🔴" if ticket["priority"] == "high" else "🟡" if ticket["priority"] == "medium" else "🟢"
+                st.write(f"{priority_color} **{ticket['user_id']}** - {ticket['subject']}")
         else:
-            st.info("No access logs available.")
+            st.info("No support tickets")
     
-    # Recent critical alerts
-    st.subheader("Recent High Priority Alerts")
-    critical_alerts = [a for a in platform.iam_alerts if a["severity"] in ["High"]][:5]
-    
-    if critical_alerts:
-        for alert in critical_alerts:
-            with st.expander(f"🚨 {alert['type']} - {alert['user_id']} - {alert['severity']}", expanded=False):
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"**Description:** {alert['description']}")
-                    st.write(f"**Department:** {alert['department']}")
-                    st.write(f"**Recommended Action:** {alert['recommended_action']}")
-                with col2:
-                    new_status = st.selectbox("Status", ["New", "Investigating", "Resolved"], 
-                                           key=f"status_{alert['alert_id']}", index=0)
-                    if st.button("Take Action", key=f"action_{alert['alert_id']}"):
-                        st.success(f"Action initiated for {alert['alert_id']}")
-    else:
-        st.success("No high priority alerts at this time")
-
-def show_user_access_monitoring(platform):
-    """Display user access monitoring interface"""
-    st.header("User Access Monitoring & Analytics")
-    
-    # Filters
+    # Quick actions
+    st.subheader("Quick Actions")
     col1, col2, col3 = st.columns(3)
-    with col1:
-        department_filter = st.multiselect("Department", platform.departments, default=platform.departments)
-    with col2:
-        role_filter = st.multiselect("Role", list(platform.roles.keys()), default=list(platform.roles.keys()))
-    with col3:
-        status_filter = st.multiselect("Status", ["active", "inactive"], default=["active"])
     
-    # Filter users
-    filtered_users = [u for u in platform.users.values() 
-                     if u["department"] in department_filter and 
-                     u["role"] in role_filter and 
-                     u["status"] in status_filter]
+    with col1:
+        if st.button("👥 Manage Users"):
+            st.session_state.radio = "👥 User Management"
+            st.rerun()
+    
+    with col2:
+        if st.button("🔐 Review Requests"):
+            st.session_state.radio = "📋 Access Requests"
+            st.rerun()
+    
+    with col3:
+        if st.button("🎫 Handle Tickets"):
+            st.session_state.radio = "🎫 Support Tickets"
+            st.rerun()
+
+def show_user_management(platform):
+    """Display user management interface"""
+    st.header("User Management")
+    
+    # Users table
+    users_data = []
+    for user_id, user_info in platform.users.items():
+        users_data.append({
+            "User ID": user_id,
+            "Name": f"{user_info['first_name']} {user_info['last_name']}",
+            "Email": user_info["email"],
+            "Department": user_info["department"],
+            "Role": user_info["role"],
+            "Status": user_info["status"],
+            "Assigned Apps": len(user_info["assigned_apps"]),
+            "Last Login": user_info["last_login"]
+        })
+    
+    users_df = pd.DataFrame(users_data)
+    st.dataframe(users_df, use_container_width=True)
+    
+    # User actions
+    st.subheader("User Actions")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        selected_user = st.selectbox("Select User", list(platform.users.keys()))
+    
+    with col2:
+        action = st.selectbox("Action", ["View Details", "Edit User", "Reset Password", "Deactivate User"])
+    
+    with col3:
+        if st.button("Execute Action"):
+            if action == "View Details":
+                user_info = platform.users[selected_user]
+                st.subheader(f"User Details: {selected_user}")
+                st.write(f"**Name:** {user_info['first_name']} {user_info['last_name']}")
+                st.write(f"**Email:** {user_info['email']}")
+                st.write(f"**Department:** {user_info['department']}")
+                st.write(f"**Role:** {user_info['role']}")
+                st.write(f"**Status:** {user_info['status']}")
+                st.write(f"**Assigned Applications:** {', '.join(user_info['assigned_apps'])}")
+
+def show_access_control(platform):
+    """Display access control management"""
+    st.header("Access Control Management")
+    
+    # Application access matrix
+    st.subheader("Application Access Matrix")
+    
+    # Create access matrix
+    users = list(platform.users.keys())
+    apps = list(platform.applications.keys())
+    
+    access_matrix = []
+    for user_id in users:
+        user_access = []
+        for app_id in apps:
+            has_access = app_id in platform.users[user_id]["assigned_apps"]
+            user_access.append(has_access)
+        access_matrix.append(user_access)
+    
+    # Display as dataframe
+    matrix_df = pd.DataFrame(
+        access_matrix,
+        index=[f"{platform.users[uid]['first_name']} {platform.users[uid]['last_name']}" for uid in users],
+        columns=[platform.applications[aid]["name"] for aid in apps]
+    )
+    
+    st.dataframe(matrix_df.style.applymap(lambda x: "background-color: #90EE90" if x else "background-color: #FFCCCB"))
+    
+    # Grant/Revoke access
+    st.subheader("Grant/Revoke Access")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        selected_user = st.selectbox("Select User", [uid for uid in platform.users.keys() if uid != "admin"])
+    
+    with col2:
+        selected_app = st.selectbox("Select Application", list(platform.applications.keys()))
+    
+    with col3:
+        current_access = selected_app in platform.users[selected_user]["assigned_apps"]
+        st.write(f"Current Access: {'✅ Granted' if current_access else '❌ Not Granted'}")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if not current_access and st.button("Grant Access"):
+                if platform.assign_application(selected_user, selected_app):
+                    st.success(f"Access to {platform.applications[selected_app]['name']} granted to {selected_user}")
+                    st.rerun()
+        with col2:
+            if current_access and st.button("Revoke Access"):
+                if platform.revoke_application(selected_user, selected_app):
+                    st.success(f"Access to {platform.applications[selected_app]['name']} revoked from {selected_user}")
+                    st.rerun()
+
+def show_access_requests(platform):
+    """Display access request management"""
+    st.header("Access Request Management")
+    
+    # Filter requests
+    status_filter = st.selectbox("Filter by Status", ["all", "pending", "approved", "rejected"])
+    
+    filtered_requests = platform.access_requests
+    if status_filter != "all":
+        filtered_requests = [r for r in platform.access_requests if r["status"] == status_filter]
+    
+    if filtered_requests:
+        for request in filtered_requests:
+            with st.expander(f"📋 {request['app_name']} - {request['user_id']} - {request['status'].title()}"):
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    st.write(f"**User:** {request['user_id']}")
+                    st.write(f"**Application:** {request['app_name']}")
+                    st.write(f"**Reason:** {request['reason']}")
+                    st.write(f"**Submitted:** {request['submitted_date'].strftime('%Y-%m-%d %H:%M')}")
+                    
+                    if request["reviewed_date"]:
+                        st.write(f"**Reviewed:** {request['reviewed_date'].strftime('%Y-%m-%d %H:%M')}")
+                        st.write(f"**Reviewed By:** {request['reviewed_by']}")
+                
+                with col2:
+                    if request["status"] == "pending":
+                        if st.button("Approve", key=f"approve_{request['request_id']}"):
+                            if platform.process_access_request(request["request_id"], "approved", st.session_state.user["user_id"]):
+                                st.success("Request approved!")
+                                st.rerun()
+                        
+                        if st.button("Reject", key=f"reject_{request['request_id']}"):
+                            if platform.process_access_request(request["request_id"], "rejected", st.session_state.user["user_id"]):
+                                st.success("Request rejected!")
+                                st.rerun()
+                    else:
+                        st.write(f"Status: {request['status'].title()}")
+    else:
+        st.info("No access requests found with the selected filter")
+
+def show_support_tickets(platform):
+    """Display support ticket management"""
+    st.header("Support Ticket Management")
+    
+    # Filter tickets
+    status_filter = st.selectbox("Filter by Status", ["all", "open", "in_progress", "resolved"])
+    
+    filtered_tickets = platform.support_tickets
+    if status_filter != "all":
+        filtered_tickets = [t for t in platform.support_tickets if t["status"] == status_filter]
+    
+    if filtered_tickets:
+        for ticket in filtered_tickets:
+            priority_color = "🔴" if ticket["priority"] == "high" else "🟡" if ticket["priority"] == "medium" else "🟢"
+            
+            with st.expander(f"{priority_color} {ticket['subject']} - {ticket['user_id']}"):
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    st.write(f"**User:** {ticket['user_id']}")
+                    st.write(f"**Subject:** {ticket['subject']}")
+                    st.write(f"**Description:** {ticket['description']}")
+                    st.write(f"**Priority:** {ticket['priority'].title()}")
+                    st.write(f"**Category:** {ticket['category'].replace('_', ' ').title()}")
+                    st.write(f"**Created:** {ticket['created_date'].strftime('%Y-%m-%d %H:%M')}")
+                    st.write(f"**Assigned To:** {ticket['assigned_to']}")
+                
+                with col2:
+                    current_status = ticket["status"]
+                    new_status = st.selectbox(
+                        "Update Status", 
+                        ["open", "in_progress", "resolved"],
+                        index=["open", "in_progress", "resolved"].index(current_status),
+                        key=f"status_{ticket['ticket_id']}"
+                    )
+                    
+                    if new_status != current_status:
+                        if st.button("Update Status", key=f"update_{ticket['ticket_id']}"):
+                            if platform.update_ticket_status(ticket["ticket_id"], new_status, st.session_state.user["user_id"]):
+                                st.success("Ticket status updated!")
+                                st.rerun()
+    else:
+        st.info("No support tickets found with the selected filter")
+
+def show_analytics_reports(platform):
+    """Display analytics and reports"""
+    st.header("Analytics & Reports")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Application usage
+        st.subheader("Application Usage")
+        app_usage = {}
+        for log in platform.access_logs:
+            app_name = log["app_name"]
+            app_usage[app_name] = app_usage.get(app_name, 0) + 1
+        
+        if app_usage:
+            fig = px.pie(values=list(app_usage.values()), names=list(app_usage.keys()))
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Access requests by status
+        st.subheader("Access Requests Status")
+        request_status = {}
+        for req in platform.access_requests:
+            status = req["status"]
+            request_status[status] = request_status.get(status, 0) + 1
+        
+        if request_status:
+            fig = px.bar(x=list(request_status.keys()), y=list(request_status.values()))
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Generate reports
+    st.subheader("Generate Reports")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📊 User Access Report"):
+            st.success("User Access Report generated!")
+            # In real implementation, this would generate and download a report
+    
+    with col2:
+        if st.button("🔐 Compliance Report"):
+            st.success("Compliance Report generated!")
+    
+    with col3:
+        if st.button("📈 Usage Analytics"):
+            st.success("Usage Analytics Report generated!")
+
+def show_user_dashboard(platform):
+    """Display user dashboard overview"""
+    user = st.session_state.user
+    
+    st.header(f"Welcome, {user['first_name']} {user['last_name']}")
     
     # User metrics
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Filtered Users", len(filtered_users))
-    col2.metric("With MFA", len([u for u in filtered_users if u["mfa_enabled"]]))
-    col3.metric("Sensitive Access", len([u for u in filtered_users if u["sensitive_access"]]))
-    
-    # Calculate average days since login
-    if filtered_users:
-        last_logins = []
-        for u in filtered_users:
-            if u['last_login']:
-                last_logins.append((datetime.now() - u['last_login']).days)
-        avg_days = np.mean(last_logins) if last_logins else 0
-        col4.metric("Avg Days Since Login", f"{avg_days:.1f}")
-    else:
-        col4.metric("Avg Days Since Login", "0.0")
-    
-    # User access table
-    st.subheader("User Access Details")
-    if filtered_users:
-        user_df = pd.DataFrame(filtered_users[:50])
-        display_columns = ["user_id", "first_name", "last_name", "department", "role", "status", "mfa_enabled", "last_login"]
-        st.dataframe(user_df[display_columns])
-    else:
-        st.info("No users match the selected filters")
-    
-    # Access pattern analysis
-    st.subheader("Access Pattern Analysis")
-    col1, col2 = st.columns(2)
     
     with col1:
-        # Department-wise access distribution
-        if platform.access_logs:
-            dept_access = pd.DataFrame(platform.access_logs[:500])
-            dept_access['user_dept'] = dept_access['user_id'].map(lambda x: platform.users[x]['department'])
-            dept_counts = dept_access['user_dept'].value_counts()
-            fig1 = px.bar(x=dept_counts.values, y=dept_counts.index, orientation='h',
-                         title="Access Count by Department")
-            st.plotly_chart(fig1, use_container_width=True)
-        else:
-            st.info("No access logs available")
-
-def show_privileged_access_management(platform):
-    """Display privileged access management interface"""
-    st.header("Privileged Access Management")
+        assigned_apps_count = len(user["assigned_apps"])
+        st.metric("My Applications", assigned_apps_count)
     
-    # PAM metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    privileged_sessions = platform.privileged_sessions
-    col1.metric("Privileged Sessions", len(privileged_sessions))
-    col2.metric("Active Privileged Users", len(set([s["user_id"] for s in privileged_sessions])))
-    
-    if privileged_sessions:
-        avg_duration = np.mean([s['session_duration'] for s in privileged_sessions])/60
-        col3.metric("Avg Session Duration", f"{avg_duration:.1f} min")
-        col4.metric("Sensitive Operations", sum([s['sensitive_operations'] for s in privileged_sessions]))
-    else:
-        col3.metric("Avg Session Duration", "0 min")
-        col4.metric("Sensitive Operations", 0)
-    
-    # Privileged session monitoring
-    st.subheader("Privileged Session Monitoring")
-    
-    if privileged_sessions:
-        session_df = pd.DataFrame(privileged_sessions[:20])
-        st.dataframe(session_df)
-    else:
-        st.info("No privileged sessions recorded")
-    
-    # Just-in-Time access requests (simulated)
-    st.subheader("Access Request Simulation")
-    if st.button("Simulate Access Request"):
-        users_with_access = [u for u in platform.users.values() if u["sensitive_access"]]
-        if users_with_access:
-            user = random.choice(users_with_access)
-            st.success(f"Simulated access request from {user['first_name']} {user['last_name']} for Admin Console")
-        else:
-            st.info("No users with sensitive access found")
-
-def show_security_alerts(platform):
-    """Display security alerts and incident management"""
-    st.header("Security Alerts & Incident Management")
-    
-    # Alert summary
-    total_alerts = len(platform.iam_alerts)
-    
-    if platform.iam_alerts:
-        alert_df = pd.DataFrame(platform.iam_alerts)
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Total Alerts", total_alerts)
-        col2.metric("High", len(alert_df[alert_df['severity'] == 'High']))
-        col3.metric("Medium", len(alert_df[alert_df['severity'] == 'Medium']))
-        col4.metric("New", len(alert_df[alert_df['status'] == 'New']))
-    else:
-        st.info("No security alerts generated")
-        return
-    
-    # Alert management interface
-    st.subheader("Alert Management")
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        severity_filter = st.multiselect("Severity", ["High", "Medium"], 
-                                       default=["High", "Medium"])
     with col2:
-        status_filter = st.multiselect("Status", ["New", "Investigating", "Resolved"], default=["New"])
+        my_requests = len([r for r in platform.access_requests if r["user_id"] == user["user_id"]])
+        st.metric("My Requests", my_requests)
+    
     with col3:
-        type_filter = st.multiselect("Alert Type", 
-                                   list(set(a['type'] for a in platform.iam_alerts)),
-                                   default=list(set(a['type'] for a in platform.iam_alerts)))
+        my_tickets = len([t for t in platform.support_tickets if t["user_id"] == user["user_id"]])
+        st.metric("My Tickets", my_tickets)
     
-    # Filter alerts
-    filtered_alerts = [a for a in platform.iam_alerts 
-                      if a['severity'] in severity_filter and 
-                      a['status'] in status_filter and 
-                      a['type'] in type_filter]
+    with col4:
+        recent_logins = len([log for log in platform.access_logs if log["user_id"] == user["user_id"] and log["action"] == "login"])
+        st.metric("Recent Logins", recent_logins)
     
-    # Display alerts
-    for alert in filtered_alerts[:10]:
-        alert_class = "alert-high" if alert['severity'] == 'High' else "alert-medium"
-        
-        with st.container():
-            st.markdown(f'<div class="{alert_class}">', unsafe_allow_html=True)
-            col1, col2, col3 = st.columns([3, 2, 1])
-            
-            with col1:
-                st.write(f"**{alert['type']}** - {alert['user_id']}")
-                st.write(alert['description'])
-            
-            with col2:
-                st.write(f"**Department:** {alert['department']}")
-                st.write(f"**Recommended:** {alert['recommended_action']}")
-            
-            with col3:
-                new_status = st.selectbox("Status", ["New", "Investigating", "Resolved"], 
-                                        key=f"status_{alert['alert_id']}",
-                                        index=["New", "Investigating", "Resolved"].index(alert['status']))
-                if new_status != alert['status']:
-                    alert['status'] = new_status
+    # Quick access to applications
+    st.subheader("Quick Access to Applications")
+    
+    if user["assigned_apps"]:
+        cols = st.columns(3)
+        for idx, app_id in enumerate(user["assigned_apps"][:6]):  # Show first 6 apps
+            app = platform.applications[app_id]
+            with cols[idx % 3]:
+                st.markdown(f"""
+                <div class="app-card">
+                    <h4>{app['name']}</h4>
+                    <p>{app['description']}</p>
+                    <small>Category: {app['category']}</small>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                if st.button("Investigate", key=f"investigate_{alert['alert_id']}"):
-                    st.success(f"Investigation started for {alert['alert_id']}")
-            
-            st.markdown('</div>', unsafe_allow_html=True)
-            st.write("---")
+                if st.button("Launch", key=f"launch_{app_id}"):
+                    st.success(f"Launching {app['name']}...")
+                    # In real implementation, this would redirect to the application
+    else:
+        st.info("You don't have access to any applications yet. Request access below.")
+    
+    # Recent activity
+    st.subheader("My Recent Activity")
+    user_logs = [log for log in platform.access_logs if log["user_id"] == user["user_id"]]
+    recent_logs = sorted(user_logs, key=lambda x: x["timestamp"], reverse=True)[:5]
+    
+    if recent_logs:
+        for log in recent_logs:
+            success_icon = "✅" if log["success"] else "❌"
+            st.write(f"{success_icon} **{log['app_name']}** - {log['action']} - {log['timestamp'].strftime('%Y-%m-%d %H:%M')}")
+    else:
+        st.info("No recent activity found")
 
-def show_access_certification(platform):
-    """Display access certification and review interface"""
-    st.header("Access Certification & Reviews")
+def show_my_applications(platform):
+    """Display user's assigned applications"""
+    user = st.session_state.user
     
-    # Access review status
-    st.subheader("Access Review Campaigns")
+    st.header("My Applications")
     
-    for review in platform.access_reviews:
-        completion_rate = (review["reviewers_completed"] / review["reviewers_required"]) * 100 if review["reviewers_required"] > 0 else 0
-        
-        with st.expander(f"📋 {review['name']} - {review['status'].upper()}"):
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Due Date", review["due_date"].strftime("%Y-%m-%d"))
-            col2.metric("Completion", f"{completion_rate:.1f}%")
-            col3.metric("Users in Scope", review["users_in_scope"])
+    if user["assigned_apps"]:
+        for app_id in user["assigned_apps"]:
+            app = platform.applications[app_id]
             
-            # Progress bar
-            if review["reviewers_required"] > 0:
-                st.progress(review["reviewers_completed"] / review["reviewers_required"])
-            
-            if st.button("Start Review", key=f"review_{review['review_id']}"):
-                st.success(f"Access review {review['review_id']} initiated")
-
-def show_compliance_audit(platform):
-    """Display compliance and audit reporting"""
-    st.header("Compliance & Audit Reporting")
-    
-    # Compliance status overview
-    st.subheader("Compliance Status")
-    
-    for check in platform.compliance_checks:
-        status_color = "🟢" if check["status"] == "PASS" else "🔴"
-        
-        with st.expander(f"{status_color} {check['name']} - {check['status']}"):
             col1, col2 = st.columns([3, 1])
+            
             with col1:
-                st.write(f"**Description:** {check['description']}")
-                st.write(f"**Severity:** {check['severity']}")
-                st.write(f"**Remediation:** {check['remediation']}")
+                st.markdown(f"""
+                <div class="app-card">
+                    <h3>{app['name']}</h3>
+                    <p><strong>Description:</strong> {app['description']}</p>
+                    <p><strong>Category:</strong> {app['category']}</p>
+                    <p><strong>Risk Level:</strong> {app['risk_level'].title()}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
             with col2:
-                if check["status"] == "FAIL":
-                    if st.button("Remediate", key=f"remediate_{check['check_id']}"):
-                        st.success(f"Remediation initiated for {check['check_id']}")
+                if st.button("Launch Application", key=f"open_{app_id}"):
+                    st.success(f"Opening {app['name']}...")
+                    # In real implementation, this would redirect to the application
+                
+                if st.button("View Details", key=f"details_{app_id}"):
+                    st.info(f"Detailed information about {app['name']}")
+    else:
+        st.info("You don't have access to any applications yet.")
+        st.markdown("Visit the **Request Access** page to request application access.")
+
+def show_request_access(platform):
+    """Display access request interface"""
+    user = st.session_state.user
     
-    # Audit trail
-    st.subheader("Access Audit Trail")
+    st.header("Request Application Access")
     
-    # Generate comprehensive audit trail
-    audit_events = []
-    for log in platform.access_logs[:200]:
-        user = platform.users[log["user_id"]]
-        audit_events.append({
-            "timestamp": log["timestamp"],
-            "user_id": log["user_id"],
-            "user_name": f"{user['first_name']} {user['last_name']}",
-            "department": user["department"],
-            "action": log["action"],
-            "application": log["application"],
-            "resource": log["resource"],
-            "location": log["location"],
-            "success": log["success"],
-            "risk_score": log["risk_score"]
-        })
+    # Available applications (excluding already assigned)
+    available_apps = [app_id for app_id in platform.applications.keys() if app_id not in user["assigned_apps"]]
     
-    if audit_events:
-        audit_df = pd.DataFrame(audit_events)
+    if available_apps:
+        with st.form("access_request_form"):
+            st.subheader("New Access Request")
+            
+            selected_app = st.selectbox(
+                "Select Application",
+                available_apps,
+                format_func=lambda x: platform.applications[x]["name"]
+            )
+            
+            reason = st.text_area(
+                "Business Justification",
+                placeholder="Explain why you need access to this application..."
+            )
+            
+            submitted = st.form_submit_button("Submit Request")
+            
+            if submitted:
+                if reason.strip():
+                    request_id = platform.create_access_request(user["user_id"], selected_app, reason)
+                    st.success(f"Access request submitted successfully! Request ID: {request_id}")
+                else:
+                    st.error("Please provide a business justification for your access request")
+    else:
+        st.success("🎉 You already have access to all available applications!")
+    
+    # Show request history
+    st.subheader("My Access Requests")
+    my_requests = [r for r in platform.access_requests if r["user_id"] == user["user_id"]]
+    
+    if my_requests:
+        for request in sorted(my_requests, key=lambda x: x["submitted_date"], reverse=True):
+            status_icon = "🟡" if request["status"] == "pending" else "🟢" if request["status"] == "approved" else "🔴"
+            
+            with st.expander(f"{status_icon} {request['app_name']} - {request['status'].title()}"):
+                st.write(f"**Request ID:** {request['request_id']}")
+                st.write(f"**Application:** {request['app_name']}")
+                st.write(f"**Reason:** {request['reason']}")
+                st.write(f"**Submitted:** {request['submitted_date'].strftime('%Y-%m-%d %H:%M')}")
+                
+                if request["reviewed_date"]:
+                    st.write(f"**Reviewed:** {request['reviewed_date'].strftime('%Y-%m-%d %H:%M')}")
+                    st.write(f"**Reviewed By:** {request['reviewed_by']}")
+    else:
+        st.info("You haven't submitted any access requests yet.")
+
+def show_my_tickets(platform):
+    """Display user's support tickets"""
+    user = st.session_state.user
+    
+    st.header("My Support Tickets")
+    
+    # Create new ticket
+    with st.form("new_ticket_form"):
+        st.subheader("Create New Ticket")
         
-        # Filters for audit trail
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
+        
         with col1:
-            audit_dept = st.multiselect("Department", platform.departments, key="audit_dept")
+            subject = st.text_input("Subject")
+            category = st.selectbox("Category", ["access_issue", "technical_issue", "password_reset", "other"])
+        
         with col2:
-            audit_action = st.multiselect("Action", list(set(audit_df['action'])), key="audit_action")
+            priority = st.selectbox("Priority", ["low", "medium", "high"])
+            description = st.text_area("Description")
+        
+        submitted = st.form_submit_button("Create Ticket")
+        
+        if submitted:
+            if subject and description:
+                ticket_id = platform.create_support_ticket(
+                    user["user_id"], subject, description, priority, category
+                )
+                st.success(f"Support ticket created successfully! Ticket ID: {ticket_id}")
+            else:
+                st.error("Please fill in all required fields")
+    
+    # Show ticket history
+    st.subheader("My Ticket History")
+    my_tickets = [t for t in platform.support_tickets if t["user_id"] == user["user_id"]]
+    
+    if my_tickets:
+        for ticket in sorted(my_tickets, key=lambda x: x["created_date"], reverse=True):
+            priority_color = "🔴" if ticket["priority"] == "high" else "🟡" if ticket["priority"] == "medium" else "🟢"
+            status_icon = "🟡" if ticket["status"] == "open" else "🔵" if ticket["status"] == "in_progress" else "🟢"
+            
+            with st.expander(f"{priority_color} {ticket['subject']} - {status_icon} {ticket['status'].replace('_', ' ').title()}"):
+                st.write(f"**Ticket ID:** {ticket['ticket_id']}")
+                st.write(f"**Subject:** {ticket['subject']}")
+                st.write(f"**Description:** {ticket['description']}")
+                st.write(f"**Priority:** {ticket['priority'].title()}")
+                st.write(f"**Category:** {ticket['category'].replace('_', ' ').title()}")
+                st.write(f"**Status:** {ticket['status'].replace('_', ' ').title()}")
+                st.write(f"**Created:** {ticket['created_date'].strftime('%Y-%m-%d %H:%M')}")
+                st.write(f"**Assigned To:** {ticket['assigned_to']}")
+                st.write(f"**Last Updated:** {ticket['last_updated'].strftime('%Y-%m-%d %H:%M')}")
+    else:
+        st.info("You haven't created any support tickets yet.")
+
+def show_my_activity(platform):
+    """Display user's activity logs"""
+    user = st.session_state.user
+    
+    st.header("My Activity Logs")
+    
+    user_logs = [log for log in platform.access_logs if log["user_id"] == user["user_id"]]
+    
+    if user_logs:
+        # Filters
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            app_filter = st.selectbox("Filter by Application", ["all"] + list(set(log["app_name"] for log in user_logs)))
+        
+        with col2:
+            action_filter = st.selectbox("Filter by Action", ["all"] + list(set(log["action"] for log in user_logs)))
+        
         with col3:
-            min_risk = st.slider("Minimum Risk Score", 0, 100, 0)
+            success_filter = st.selectbox("Filter by Status", ["all", "success", "failed"])
         
         # Apply filters
-        filtered_audit = audit_df
-        if audit_dept:
-            filtered_audit = filtered_audit[filtered_audit['department'].isin(audit_dept)]
-        if audit_action:
-            filtered_audit = filtered_audit[filtered_audit['action'].isin(audit_action)]
-        filtered_audit = filtered_audit[filtered_audit['risk_score'] >= min_risk]
+        filtered_logs = user_logs
+        if app_filter != "all":
+            filtered_logs = [log for log in filtered_logs if log["app_name"] == app_filter]
+        if action_filter != "all":
+            filtered_logs = [log for log in filtered_logs if log["action"] == action_filter]
+        if success_filter != "all":
+            filtered_logs = [log for log in filtered_logs if log["success"] == (success_filter == "success")]
         
-        st.dataframe(filtered_audit.sort_values('timestamp', ascending=False).head(50))
+        # Display logs
+        for log in sorted(filtered_logs, key=lambda x: x["timestamp"], reverse=True)[:20]:  # Show last 20 logs
+            success_icon = "✅" if log["success"] else "❌"
+            st.write(f"{success_icon} **{log['app_name']}** - {log['action']} - {log['timestamp'].strftime('%Y-%m-%d %H:%M')} - {log['location']}")
     else:
-        st.info("No audit events available")
+        st.info("No activity logs found for your account.")
+
+def main():
+    # Initialize platform in session state
+    if 'platform' not in st.session_state:
+        st.session_state.platform = EnterpriseIAMPlatform()
+    
+    # Initialize login state
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+        st.session_state.user = None
+    
+    # Check if user is logged in
+    if not st.session_state.logged_in:
+        login_page()
+    else:
+        # Route to appropriate dashboard based on role
+        if st.session_state.user["role"] == "admin":
+            admin_dashboard()
+        else:
+            user_dashboard()
 
 if __name__ == "__main__":
     main()
