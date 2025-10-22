@@ -9,7 +9,6 @@ import hashlib
 import time
 import random
 import threading
-import asyncio
 import queue
 from typing import Dict, List, Any
 import warnings
@@ -19,7 +18,6 @@ import re
 import math
 import uuid
 import hashlib
-from streamlit_autorefresh import st_autorefresh
 
 warnings.filterwarnings('ignore')
 
@@ -49,11 +47,6 @@ st.markdown("""
     @keyframes glow {
         from { text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
         to { text-shadow: 0 0 15px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00; }
-    }
-    .cyber-terminal {
-        background-color: #0a0a0a;
-        color: #00ff00;
-        font-family: 'Courier New', monospace;
     }
     .dashboard-panel {
         background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
@@ -205,6 +198,28 @@ st.markdown("""
     @keyframes blink {
         0%, 50% { opacity: 1; }
         51%, 100% { opacity: 0; }
+    }
+    .stButton button {
+        background: linear-gradient(135deg, #00ff00 0%, #008800 100%);
+        color: black;
+        border: none;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 5px;
+        font-weight: bold;
+        font-family: 'Courier New', monospace;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    .stButton button:hover {
+        background: linear-gradient(135deg, #44ff44 0%, #00aa00 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 255, 0, 0.4);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -800,6 +815,17 @@ def create_threat_radar(terminal):
     
     return radar_html
 
+def auto_refresh():
+    """Auto-refresh the dashboard"""
+    if 'last_refresh' not in st.session_state:
+        st.session_state.last_refresh = datetime.now()
+    
+    # Simple auto-refresh by checking time difference
+    current_time = datetime.now()
+    if (current_time - st.session_state.last_refresh).total_seconds() > 5:  # Refresh every 5 seconds
+        st.session_state.last_refresh = current_time
+        st.rerun()
+
 def cyber_login():
     """Display cyber terminal login"""
     st.markdown('<div class="main-header">🛡️ CYBER TERMINAL v2.0</div>', unsafe_allow_html=True)
@@ -871,8 +897,8 @@ def cyber_dashboard():
     terminal = st.session_state.cyber_terminal
     user = st.session_state.user
     
-    # Auto-refresh every 3 seconds for real-time updates
-    st_autorefresh(interval=3000, key="cyber_dashboard_refresh")
+    # Auto-refresh
+    auto_refresh()
     
     # Update live data
     terminal.update_live_data()
@@ -905,16 +931,25 @@ def cyber_dashboard():
             st.success(f"Live attack simulated: {attack_id}")
         
         if st.button("🛡️ DEPLOY COUNTERMEASURES", use_container_width=True):
-            st.session_state.show_defense = True
+            active_threats = [t for t in terminal.live_threats if t["status"] == "Active"]
+            if active_threats:
+                threat = random.choice(active_threats)
+                measures = ["Network Isolation", "Endpoint Quarantine", "Firewall Rules Update"]
+                if terminal.deploy_countermeasures(threat["threat_id"], measures):
+                    st.success(f"Countermeasures deployed against {threat['threat_id']}")
+            else:
+                st.warning("No active threats to counter")
         
         st.markdown("---")
         st.markdown("**TERMINAL MODULES**", unsafe_allow_html=True)
         
-        module = st.radio("SELECT MODULE", [
+        module_options = [
             "📊 LIVE DASHBOARD", "🌐 NETWORK DEFENSE", "💻 ENDPOINT SECURITY", 
             "🕵️ THREAT HUNTING", "🔍 DIGITAL FORENSICS", "📡 THREAT INTELLIGENCE",
             "🚨 INCIDENT RESPONSE", "📈 ANALYTICS & REPORTING"
-        ])
+        ]
+        
+        module = st.radio("SELECT MODULE", module_options)
         
         st.markdown("---")
         st.markdown("**LIVE DATA STREAM**", unsafe_allow_html=True)
@@ -971,7 +1006,7 @@ def show_cyber_dashboard(terminal):
     with col1:
         critical_threats = len([t for t in terminal.live_threats if t["severity"] == "Critical" and t["status"] == "Active"])
         st.markdown(f"""
-        <div class='metric-glowing live-data-stream'>
+        <div class='metric-glowing'>
             <h1 style='color: #ff0000;'>{critical_threats}</h1>
             <p>CRITICAL THREATS</p>
         </div>
@@ -980,7 +1015,7 @@ def show_cyber_dashboard(terminal):
     with col2:
         active_incidents = len([t for t in terminal.live_threats if t["status"] == "Active"])
         st.markdown(f"""
-        <div class='metric-glowing live-data-stream'>
+        <div class='metric-glowing'>
             <h1 style='color: #ff6600;'>{active_incidents}</h1>
             <p>ACTIVE INCIDENTS</p>
         </div>
@@ -989,7 +1024,7 @@ def show_cyber_dashboard(terminal):
     with col3:
         high_severity_alerts = len([a for a in terminal.ids_alerts if a["severity"] in ["High", "Critical"]])
         st.markdown(f"""
-        <div class='metric-glowing live-data-stream'>
+        <div class='metric-glowing'>
             <h1 style='color: #ffff00;'>{high_severity_alerts}</h1>
             <p>HIGH SEVERITY ALERTS</p>
         </div>
@@ -998,7 +1033,7 @@ def show_cyber_dashboard(terminal):
     with col4:
         endpoints_at_risk = len([e for e in terminal.endpoint_telemetry if e["risk_score"] > 70])
         st.markdown(f"""
-        <div class='metric-glowing live-data-stream'>
+        <div class='metric-glowing'>
             <h1 style='color: #00ff00;'>{endpoints_at_risk}</h1>
             <p>ENDPOINTS AT RISK</p>
         </div>
@@ -1009,7 +1044,7 @@ def show_cyber_dashboard(terminal):
     
     with col1:
         st.markdown("### 🎯 LIVE THREAT RADAR")
-        st.markdown("**Active Threats Detected:**")
+        st.markdown(f"**Active Threats Detected: {len([t for t in terminal.live_threats if t['status'] == 'Active'])}**")
         
         # Display the threat radar
         radar_html = create_threat_radar(terminal)
@@ -1028,57 +1063,543 @@ def show_cyber_dashboard(terminal):
     with col2:
         st.markdown("### 📡 REAL-TIME THREAT FEED")
         
-        # Real-time threat updates with streaming effect
+        # Real-time threat updates
         recent_threats = sorted(terminal.live_threats, key=lambda x: x["last_activity"], reverse=True)[:8]
         
-        threat_feed_container = st.container()
-        with threat_feed_container:
-            for threat in recent_threats:
-                severity_color = {
-                    "Critical": "#ff0000",
-                    "High": "#ff6600", 
-                    "Medium": "#ffff00",
-                    "Low": "#00ff00"
-                }[threat["severity"]]
-                
-                time_diff = (datetime.now() - threat["last_activity"]).total_seconds()
-                is_new = time_diff < 30  # Highlight threats from last 30 seconds
-                new_indicator = " 🆕" if is_new else ""
-                stream_class = "live-data-stream" if is_new else ""
-                
-                st.markdown(f"""
-                <div class='log-entry {stream_class}'>
-                    <span style='color: {severity_color};'>[{threat['last_activity'].strftime('%H:%M:%S')}]</span>
-                    {threat['type']} | Source: {threat['source_country']} | Confidence: {threat['confidence']}%{new_indicator}
-                </div>
-                """, unsafe_allow_html=True)
+        for threat in recent_threats:
+            severity_color = {
+                "Critical": "#ff0000",
+                "High": "#ff6600", 
+                "Medium": "#ffff00",
+                "Low": "#00ff00"
+            }[threat["severity"]]
+            
+            time_diff = (datetime.now() - threat["last_activity"]).total_seconds()
+            is_new = time_diff < 30  # Highlight threats from last 30 seconds
+            new_indicator = " 🆕" if is_new else ""
+            stream_class = "live-data-stream" if is_new else ""
+            
+            st.markdown(f"""
+            <div class='log-entry {stream_class}'>
+                <span style='color: {severity_color};'>[{threat['last_activity'].strftime('%H:%M:%S')}]</span>
+                {threat['type']} | Source: {threat['source_country']} | Confidence: {threat['confidence']}%{new_indicator}
+            </div>
+            """, unsafe_allow_html=True)
     
     # Real-time Network Activity Stream
     st.markdown("### 🌐 LIVE NETWORK ACTIVITY STREAM")
     
     # Create a streaming log of network activity
-    recent_activity = sorted(terminal.network_activity, key=lambda x: x["timestamp"], reverse=True)[:20]
+    recent_activity = sorted(terminal.network_activity, key=lambda x: x["timestamp"], reverse=True)[:15]
     
-    log_container = st.container()
-    with log_container:
-        for activity in recent_activity:
-            flag_icon = "🚩" if activity["flagged"] else "  "
-            threat_color = "#ff0000" if activity["threat_score"] > 80 else "#ffff00" if activity["threat_score"] > 60 else "#00ff00"
-            
-            # Highlight very recent activity
-            time_diff = (datetime.now() - activity["timestamp"]).total_seconds()
-            stream_class = "live-data-stream" if time_diff < 10 else ""
-            
+    for activity in recent_activity:
+        flag_icon = "🚩" if activity["flagged"] else "  "
+        threat_color = "#ff0000" if activity["threat_score"] > 80 else "#ffff00" if activity["threat_score"] > 60 else "#00ff00"
+        
+        # Highlight very recent activity
+        time_diff = (datetime.now() - activity["timestamp"]).total_seconds()
+        stream_class = "live-data-stream" if time_diff < 10 else ""
+        
+        st.markdown(f"""
+        <div class='log-entry {stream_class}'>
+            <span style='color: #00ff00;'>[{activity['timestamp'].strftime('%H:%M:%S')}]</span>
+            {flag_icon} {activity['source_ip']}:{activity.get('source_port', 'N/A')} → {activity['dest_ip']}:{activity.get('dest_port', 'N/A')}
+            <span style='color: #ffff00;'>{activity['protocol']}</span>
+            <span style='color: {threat_color};'>Threat: {activity['threat_score']}%</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+def show_network_defense(terminal):
+    """Display network defense module"""
+    st.markdown("## 🌐 NETWORK DEFENSE OPERATIONS")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🛡️ FIREWALL STATUS")
+        
+        # Firewall rules and status
+        firewall_rules = [
+            {"rule": "SSH Access", "status": "Blocked", "hits": random.randint(1000, 5000)},
+            {"rule": "Web Traffic", "status": "Allowed", "hits": random.randint(50000, 100000)},
+            {"rule": "Database Access", "status": "Restricted", "hits": random.randint(200, 1000)},
+            {"rule": "File Sharing", "status": "Blocked", "hits": random.randint(500, 2000)},
+            {"rule": "Remote Desktop", "status": "Restricted", "hits": random.randint(50, 500)}
+        ]
+        
+        for rule in firewall_rules:
+            status_color = "#00ff00" if rule["status"] == "Allowed" else "#ffff00" if rule["status"] == "Restricted" else "#ff0000"
             st.markdown(f"""
-            <div class='log-entry {stream_class}'>
-                <span style='color: #00ff00;'>[{activity['timestamp'].strftime('%H:%M:%S')}]</span>
-                {flag_icon} {activity['source_ip']}:{activity.get('source_port', 'N/A')} → {activity['dest_ip']}:{activity.get('dest_port', 'N/A')}
-                <span style='color: #ffff00;'>{activity['protocol']}</span>
-                <span style='color: {threat_color};'>Threat: {activity['threat_score']}%</span>
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {status_color};'>
+                <strong>{rule['rule']}</strong> | Status: <span style='color: {status_color};'>{rule['status']}</span> | Hits: {rule['hits']}
             </div>
             """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### 📊 NETWORK TRAFFIC ANALYSIS")
+        
+        # Protocol distribution
+        protocols = {}
+        for activity in terminal.network_activity[-100:]:  # Last 100 activities
+            protocol = activity["protocol"]
+            protocols[protocol] = protocols.get(protocol, 0) + 1
+        
+        if protocols:
+            fig = px.pie(values=list(protocols.values()), names=list(protocols.keys()), 
+                        title="Live Protocol Distribution")
+            fig.update_layout(
+                paper_bgcolor='#1a1a1a',
+                plot_bgcolor='#1a1a1a',
+                font_color='#00ff00'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # IDS/IPS Alerts
+    st.markdown("### 🚨 INTRUSION DETECTION SYSTEM")
+    
+    high_severity_alerts = [a for a in terminal.ids_alerts if a["severity"] in ["High", "Critical"]][:10]
+    
+    for alert in high_severity_alerts:
+        severity_color = "#ff0000" if alert["severity"] == "Critical" else "#ff6600"
+        
+        st.markdown(f"""
+        <div class='threat-panel'>
+            <strong>{alert['attack_type']}</strong> | 
+            Source: {alert['source_ip']} → Dest: {alert['dest_ip']} | 
+            Severity: <span style='color: {severity_color};'>{alert['severity']}</span> | 
+            Action: {alert['action_taken']} | 
+            Confidence: {alert['confidence']}%
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Network Defense Actions
+    st.markdown("### 🎯 ACTIVE DEFENSE MEASURES")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🔒 BLOCK MALICIOUS IPs", use_container_width=True):
+            st.success("Malicious IPs blocked across all network segments")
+    
+    with col2:
+        if st.button("🛡️ ENABLE DDoS PROTECTION", use_container_width=True):
+            st.success("DDoS protection enabled - monitoring network traffic")
+    
+    with col3:
+        if st.button("📡 SCAN FOR VULNERABILITIES", use_container_width=True):
+            st.success("Network vulnerability scan initiated")
 
-# ... (Other module functions remain the same as in the previous implementation)
+def show_endpoint_security(terminal):
+    """Display endpoint security module"""
+    st.markdown("## 💻 ENDPOINT SECURITY MANAGEMENT")
+    
+    # Endpoint Risk Dashboard
+    st.markdown("### 📈 ENDPOINT RISK ASSESSMENT")
+    
+    high_risk_endpoints = [e for e in terminal.endpoint_telemetry if e["risk_score"] > 70]
+    medium_risk_endpoints = [e for e in terminal.endpoint_telemetry if 40 <= e["risk_score"] <= 70]
+    low_risk_endpoints = [e for e in terminal.endpoint_telemetry if e["risk_score"] < 40]
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Endpoints", len(terminal.endpoint_telemetry))
+    
+    with col2:
+        st.metric("High Risk", len(high_risk_endpoints), delta_color="inverse")
+    
+    with col3:
+        st.metric("Medium Risk", len(medium_risk_endpoints))
+    
+    with col4:
+        st.metric("Low Risk", len(low_risk_endpoints))
+    
+    # Endpoint Details
+    st.markdown("### 🔍 ENDPOINT DETAILS")
+    
+    for endpoint in high_risk_endpoints[:5]:
+        risk_color = "#ff0000" if endpoint["risk_score"] > 80 else "#ff6600"
+        
+        with st.expander(f"🚨 {endpoint['endpoint_id']} - Risk Score: {endpoint['risk_score']}"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**OS:** {endpoint['os_version']}")
+                st.write(f"**AV Status:** {endpoint['antivirus_status']}")
+                st.write(f"**Threats Detected:** {endpoint['threats_detected']}")
+            
+            with col2:
+                st.write(f"**Patch Level:** {endpoint['patch_level']}")
+                st.write(f"**Encryption:** {endpoint['encryption_status']}")
+                st.write(f"**Last Scan:** {endpoint['last_scan'].strftime('%Y-%m-%d')}")
+            
+            if endpoint["suspicious_processes"]:
+                st.write(f"**Suspicious Processes:** {', '.join(endpoint['suspicious_processes'])}")
+    
+    # Endpoint Protection Actions
+    st.markdown("### 🛡️ ENDPOINT PROTECTION ACTIONS")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        endpoint_to_quarantine = st.selectbox("Select Endpoint", [e["endpoint_id"] for e in high_risk_endpoints])
+        if st.button("🔄 QUARANTINE ENDPOINT"):
+            st.success(f"Endpoint {endpoint_to_quarantine} quarantined for investigation")
+    
+    with col2:
+        if st.button("🔍 INITIATE DEEP SCAN", use_container_width=True):
+            st.success("Deep malware scan initiated on all endpoints")
+    
+    with col3:
+        if st.button("📊 UPDATE SIGNATURES", use_container_width=True):
+            st.success("Antivirus signatures updated across all endpoints")
+
+def show_threat_hunting(terminal):
+    """Display threat hunting module"""
+    st.markdown("## 🕵️ ADVANCED THREAT HUNTING")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🎯 HUNTING QUERIES")
+        
+        hunting_queries = [
+            "Processes with network connections to known malicious IPs",
+            "Suspicious PowerShell execution patterns",
+            "Unusual scheduled task creations",
+            "Registry modifications by unknown processes",
+            "Lateral movement attempts using WMI"
+        ]
+        
+        for query in hunting_queries:
+            st.markdown(f"""
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #ffff00;'>
+                🔍 {query}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Custom hunting query
+        custom_query = st.text_input("Enter custom hunting query:")
+        if st.button("🚀 EXECUTE HUNT"):
+            if custom_query:
+                st.success(f"Executing hunt: {custom_query}")
+                # Simulate hunting results
+                st.info("Hunt completed: 3 suspicious activities found")
+    
+    with col2:
+        st.markdown("### 📊 HUNTING RESULTS")
+        
+        # Simulated hunting results
+        hunting_results = [
+            {"type": "Suspicious Process", "endpoint": "WS-023", "confidence": 85},
+            {"type": "Network Anomaly", "endpoint": "SRV-005", "confidence": 92},
+            {"type": "Fileless Attack", "endpoint": "WS-042", "confidence": 78},
+            {"type": "Credential Theft", "endpoint": "WS-015", "confidence": 88}
+        ]
+        
+        for result in hunting_results:
+            confidence_color = "#00ff00" if result["confidence"] > 90 else "#ffff00" if result["confidence"] > 75 else "#ff6600"
+            
+            st.markdown(f"""
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border: 1px solid {confidence_color};'>
+                <strong>{result['type']}</strong><br>
+                Endpoint: {result['endpoint']} | 
+                Confidence: <span style='color: {confidence_color};'>{result['confidence']}%</span>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Threat Hunting Techniques
+    st.markdown("### 🔧 HUNTING METHODOLOGIES")
+    
+    techniques = [
+        "🔍 Hypothesis-Driven Investigation",
+        "📈 Anomaly-Based Detection", 
+        "🔗 IOC-Based Hunting",
+        "🧠 Behavioral Analysis",
+        "📊 ML-Powered Threat Detection"
+    ]
+    
+    for technique in techniques:
+        st.markdown(f"""
+        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #00ff00;'>
+            {technique}
+        </div>
+        """, unsafe_allow_html=True)
+
+def show_digital_forensics(terminal):
+    """Display digital forensics module"""
+    st.markdown("## 🔍 DIGITAL FORENSICS LAB")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🧩 FORENSIC ARTIFACTS")
+        
+        artifacts = [
+            {"type": "Memory Dump", "size": "4.2 GB", "analysis": "Completed", "findings": 3},
+            {"type": "Disk Image", "size": "128 GB", "analysis": "In Progress", "findings": 12},
+            {"type": "Network Capture", "size": "2.1 GB", "analysis": "Completed", "findings": 8},
+            {"type": "Log Files", "size": "856 MB", "analysis": "Pending", "findings": 0}
+        ]
+        
+        for artifact in artifacts:
+            status_color = "#00ff00" if artifact["analysis"] == "Completed" else "#ffff00" if artifact["analysis"] == "In Progress" else "#ff6600"
+            
+            st.markdown(f"""
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {status_color};'>
+                <strong>{artifact['type']}</strong><br>
+                Size: {artifact['size']} | 
+                Status: <span style='color: {status_color};'>{artifact['analysis']}</span> | 
+                Findings: {artifact['findings']}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### 🔬 MALWARE ANALYSIS")
+        
+        malware_samples = [
+            {"name": "Trojan.Emotet", "risk": "High", "analysis": "Behavioral analysis completed"},
+            {"name": "Ransomware.Ryuk", "risk": "Critical", "analysis": "Reverse engineering in progress"},
+            {"name": "Backdoor.DarkComet", "risk": "High", "analysis": "Network analysis completed"}
+        ]
+        
+        for malware in malware_samples:
+            risk_color = "#ff0000" if malware["risk"] == "Critical" else "#ff6600"
+            
+            st.markdown(f"""
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border: 1px solid {risk_color};'>
+                <strong>{malware['name']}</strong><br>
+                Risk: <span style='color: {risk_color};'>{malware['risk']}</span><br>
+                {malware['analysis']}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Forensic Tools
+    st.markdown("### 🛠️ FORENSIC TOOLS")
+    
+    tools = [
+        "Autopsy - Digital forensics platform",
+        "Volatility - Memory forensics",
+        "Wireshark - Network analysis", 
+        "FTK Imager - Disk imaging",
+        "Sleuth Kit - File system analysis"
+    ]
+    
+    for tool in tools:
+        st.markdown(f"""
+        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #00ff00;'>
+            🛠️ {tool}
+        </div>
+        """, unsafe_allow_html=True)
+
+def show_threat_intelligence(terminal):
+    """Display threat intelligence module"""
+    st.markdown("## 📡 THREAT INTELLIGENCE PLATFORM")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🌍 GLOBAL THREAT LANDSCAPE")
+        
+        # APT Groups
+        st.markdown("#### Advanced Persistent Threats")
+        for apt in terminal.threat_intel_db["advanced_persistent_threats"]:
+            st.markdown(f"""
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #ff0000;'>
+                <strong>{apt['name']}</strong> | Country: {apt['country']}<br>
+                Targets: {', '.join(apt['targets'])}<br>
+                Tactics: {', '.join(apt['tactics'])}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### 🦠 MALWARE INTELLIGENCE")
+        
+        for malware in terminal.threat_intel_db["malware_families"]:
+            st.markdown(f"""
+            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #ff6600;'>
+                <strong>{malware['name']}</strong> | Type: {malware['type']}<br>
+                Function: {malware['primary_function']}<br>
+                Propagation: {malware['propagation']}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Vulnerability Intelligence
+    st.markdown("### 🕳️ VULNERABILITY INTELLIGENCE")
+    
+    for vuln in terminal.threat_intel_db["vulnerabilities"]:
+        severity_color = "#ff0000" if vuln["severity"] == "Critical" else "#ff6600"
+        
+        st.markdown(f"""
+        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {severity_color};'>
+            <strong>{vuln['cve']} - {vuln['name']}</strong><br>
+            Severity: <span style='color: {severity_color};'>{vuln['severity']}</span><br>
+            Affected: {', '.join(vuln['affected_software'])}
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Threat Intelligence Feeds
+    st.markdown("### 📊 INTELLIGENCE FEEDS")
+    
+    feeds = [
+        {"name": "AlienVault OTX", "status": "Active", "updates": "2 hours ago"},
+        {"name": "MISP Threat Sharing", "status": "Active", "updates": "1 hour ago"},
+        {"name": "CISA Automated Indicators", "status": "Active", "updates": "30 minutes ago"},
+        {"name": "Commercial Intel Feed", "status": "Active", "updates": "15 minutes ago"}
+    ]
+    
+    for feed in feeds:
+        st.markdown(f"""
+        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #00ff00;'>
+            📡 {feed['name']} | Status: {feed['status']} | Last Update: {feed['updates']}
+        </div>
+        """, unsafe_allow_html=True)
+
+def show_incident_response(terminal):
+    """Display incident response module"""
+    st.markdown("## 🚨 INCIDENT RESPONSE COMMAND")
+    
+    # Active Incidents
+    active_incidents = [t for t in terminal.live_threats if t["status"] == "Active"]
+    
+    st.markdown(f"### 🔥 ACTIVE INCIDENTS: {len(active_incidents)}")
+    
+    for incident in active_incidents:
+        severity_color = {"Critical": "#ff0000", "High": "#ff6600", "Medium": "#ffff00", "Low": "#00ff00"}[incident["severity"]]
+        
+        with st.expander(f"🚨 {incident['threat_id']} - {incident['type']} - Severity: {incident['severity']}"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**First Detected:** {incident['first_detected'].strftime('%Y-%m-%d %H:%M')}")
+                st.write(f"**Source Country:** {incident['source_country']}")
+                st.write(f"**Target Sector:** {incident['target_sector']}")
+                st.write(f"**Confidence:** {incident['confidence']}%")
+            
+            with col2:
+                st.write(f"**Assigned To:** {incident['assigned_to']}")
+                st.write(f"**Status:** {incident['status']}")
+                st.write("**Indicators:**")
+                for indicator in incident["indicators"]:
+                    st.write(f"  - {indicator}")
+            
+            # Response Actions
+            st.markdown("#### 🛡️ RESPONSE ACTIONS")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("🛑 CONTAIN THREAT", key=f"contain_{incident['threat_id']}"):
+                    measures = ["Network Isolation", "Endpoint Quarantine", "Firewall Rules Update"]
+                    if terminal.deploy_countermeasures(incident["threat_id"], measures):
+                        st.success("Threat contained successfully!")
+                        st.rerun()
+            
+            with col2:
+                if st.button("🔍 INVESTIGATE", key=f"investigate_{incident['threat_id']}"):
+                    st.info("Initiating deep investigation...")
+            
+            with col3:
+                if st.button("📋 ESCALATE", key=f"escalate_{incident['threat_id']}"):
+                    st.warning("Incident escalated to Cyber Commander")
+    
+    # Incident Response Playbooks
+    st.markdown("### 📚 RESPONSE PLAYBOOKS")
+    
+    playbooks = [
+        "Ransomware Attack Response",
+        "Data Breach Response", 
+        "DDoS Attack Mitigation",
+        "Insider Threat Investigation",
+        "Advanced Threat Containment"
+    ]
+    
+    for playbook in playbooks:
+        st.markdown(f"""
+        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #00ff00;'>
+            📖 {playbook}
+        </div>
+        """, unsafe_allow_html=True)
+
+def show_analytics_reporting(terminal):
+    """Display analytics and reporting module"""
+    st.markdown("## 📈 CYBER SECURITY ANALYTICS")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 📊 SECURITY METRICS")
+        
+        # Threat trend over time
+        dates = [datetime.now() - timedelta(days=x) for x in range(30, 0, -1)]
+        threats_per_day = [random.randint(5, 25) for _ in range(30)]
+        
+        fig = px.line(x=dates, y=threats_per_day, title="Daily Threat Detection")
+        fig.update_layout(
+            paper_bgcolor='#1a1a1a',
+            plot_bgcolor='#1a1a1a',
+            font_color='#00ff00',
+            xaxis_title="Date",
+            yaxis_title="Threats Detected"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.markdown("### 🎯 ATTACK VECTOR ANALYSIS")
+        
+        attack_vectors = {
+            "Phishing": 35,
+            "Malware": 25,
+            "DDoS": 15,
+            "Insider Threat": 10,
+            "Vulnerability Exploit": 15
+        }
+        
+        fig = px.pie(values=list(attack_vectors.values()), names=list(attack_vectors.keys()))
+        fig.update_layout(
+            paper_bgcolor='#1a1a1a',
+            plot_bgcolor='#1a1a1a',
+            font_color='#00ff00'
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Security Reports
+    st.markdown("### 📄 SECURITY REPORTS")
+    
+    reports = [
+        {"name": "Daily Security Briefing", "period": "Last 24 hours", "status": "Generated"},
+        {"name": "Weekly Threat Assessment", "period": "Last 7 days", "status": "Pending"},
+        {"name": "Monthly Compliance Report", "period": "Last 30 days", "status": "Generated"},
+        {"name": "Quarterly Security Review", "period": "Last 90 days", "status": "In Progress"}
+    ]
+    
+    for report in reports:
+        status_color = "#00ff00" if report["status"] == "Generated" else "#ffff00" if report["status"] == "In Progress" else "#ff6600"
+        
+        st.markdown(f"""
+        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {status_color};'>
+            <strong>{report['name']}</strong><br>
+            Period: {report['period']} | 
+            Status: <span style='color: {status_color};'>{report['status']}</span>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Report Generation
+    st.markdown("### 🚀 GENERATE REPORTS")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📊 DAILY REPORT", use_container_width=True):
+            st.success("Daily security report generated and sent to stakeholders")
+    
+    with col2:
+        if st.button("📈 WEEKLY ASSESSMENT", use_container_width=True):
+            st.success("Weekly threat assessment compiled")
+    
+    with col3:
+        if st.button("🛡️ COMPLIANCE REPORT", use_container_width=True):
+            st.success("Compliance report generated for audit")
 
 def main():
     # Initialize cyber terminal in session state
