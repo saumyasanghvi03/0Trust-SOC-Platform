@@ -8,1645 +8,1863 @@ import json
 import hashlib
 import time
 import random
-import threading
-import queue
+import uuid
 from typing import Dict, List, Any
 import warnings
-from cryptography.fernet import Fernet
-import ipaddress
-import re
-import math
-import uuid
-import hashlib
-
+from collections import defaultdict, deque
+import base64
 warnings.filterwarnings('ignore')
 
 # Page configuration
 st.set_page_config(
-    page_title="CYBER TERMINAL v2.0",
+    page_title="AEGIS CYBER COMMAND CENTER",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Advanced Cyber Terminal CSS with real-time animations
+# Enhanced Cyber Terminal CSS with professional styling
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+    
+    .main {
+        background-color: #0a0e27;
+        background-image: 
+            linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    
     .main-header {
-        font-size: 2.8rem;
-        color: #00ff00;
+        font-size: 3rem;
+        font-weight: 900;
+        color: #00ff41;
         text-align: center;
-        margin-bottom: 1rem;
-        font-family: 'Courier New', monospace;
-        text-shadow: 0 0 15px #00ff00;
-        background: linear-gradient(90deg, #00ff00, #ffff00, #00ff00);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: glow 2s ease-in-out infinite alternate;
+        margin-bottom: 0.5rem;
+        font-family: 'Share Tech Mono', monospace;
+        text-shadow: 
+            0 0 10px #00ff41,
+            0 0 20px #00ff41,
+            0 0 30px #00ff41,
+            0 0 40px #00ff41;
+        animation: glow-pulse 2s ease-in-out infinite alternate;
+        letter-spacing: 5px;
     }
-    @keyframes glow {
-        from { text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
-        to { text-shadow: 0 0 15px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00; }
+    
+    @keyframes glow-pulse {
+        from { 
+            text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41, 0 0 30px #00ff41;
+            transform: scale(1);
+        }
+        to { 
+            text-shadow: 0 0 20px #00ff41, 0 0 30px #00ff41, 0 0 40px #00ff41, 0 0 50px #00ff41;
+            transform: scale(1.02);
+        }
     }
-    .dashboard-panel {
-        background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
-        border: 1px solid #00ff00;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
-        box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
-    }
-    .threat-panel {
-        background: linear-gradient(135deg, #2a0a0a 0%, #1a0505 100%);
-        border: 1px solid #ff0000;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
-        animation: pulse-red 3s infinite;
-    }
-    @keyframes pulse-red {
-        0% { border-color: #ff0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
-        50% { border-color: #ff4444; box-shadow: 0 0 20px rgba(255, 0, 0, 0.6); }
-        100% { border-color: #ff0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
-    }
-    .defense-panel {
-        background: linear-gradient(135deg, #0a2a0a 0%, #051a05 100%);
-        border: 1px solid #00ff00;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
-        animation: pulse-green 3s infinite;
-    }
-    @keyframes pulse-green {
-        0% { border-color: #00ff00; box-shadow: 0 0 10px rgba(0, 255, 0, 0.3); }
-        50% { border-color: #44ff44; box-shadow: 0 0 20px rgba(0, 255, 0, 0.6); }
-        100% { border-color: #00ff00; box-shadow: 0 0 10px rgba(0, 255, 0, 0.3); }
-    }
-    .metric-glowing {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-        border: 1px solid #00ff00;
-        border-radius: 8px;
-        padding: 20px;
+    
+    .cyber-subheader {
         text-align: center;
-        animation: metric-glow 4s infinite;
+        color: #0ff;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 1.2rem;
+        letter-spacing: 3px;
+        margin-bottom: 2rem;
+        text-shadow: 0 0 10px #0ff;
     }
-    @keyframes metric-glow {
-        0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.3); }
-        50% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.6); }
-        100% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.3); }
-    }
-    .log-entry {
-        font-family: 'Courier New', monospace;
-        font-size: 0.85em;
-        color: #00ff00;
-        border-bottom: 1px solid #333;
-        padding: 0.3rem 0;
-        transition: all 0.3s ease;
-    }
-    .log-entry:hover {
-        background-color: #1a1a1a;
-        transform: translateX(5px);
-    }
-    .cyber-button {
-        background: linear-gradient(135deg, #00ff00 0%, #008800 100%);
-        border: none;
-        color: black;
-        padding: 10px 20px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 14px;
-        margin: 4px 2px;
-        cursor: pointer;
-        border-radius: 5px;
-        font-weight: bold;
-        font-family: 'Courier New', monospace;
-        transition: all 0.3s ease;
-    }
-    .cyber-button:hover {
-        background: linear-gradient(135deg, #44ff44 0%, #00aa00 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 255, 0, 0.4);
-    }
-    .cyber-button-red {
-        background: linear-gradient(135deg, #ff0000 0%, #880000 100%);
-        color: white;
-    }
-    .cyber-button-red:hover {
-        background: linear-gradient(135deg, #ff4444 0%, #aa0000 100%);
-        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.4);
-    }
-    .terminal-output {
-        background-color: #000000;
-        border: 2px solid #00ff00;
-        border-radius: 5px;
+    
+    .terminal-window {
+        background: #000;
+        border: 2px solid #00ff41;
+        border-radius: 8px;
         padding: 15px;
-        font-family: 'Courier New', monospace;
-        color: #00ff00;
+        font-family: 'Share Tech Mono', monospace;
+        color: #00ff41;
+        font-size: 0.9rem;
         height: 400px;
         overflow-y: auto;
-        margin: 10px 0;
+        box-shadow: 
+            0 0 20px rgba(0, 255, 65, 0.3),
+            inset 0 0 20px rgba(0, 255, 65, 0.05);
+        position: relative;
     }
+    
+    .terminal-window::before {
+        content: "● ● ●";
+        position: absolute;
+        top: -25px;
+        left: 10px;
+        color: #ff5f56;
+        font-size: 20px;
+        letter-spacing: 5px;
+    }
+    
+    .terminal-window::-webkit-scrollbar {
+        width: 10px;
+    }
+    
+    .terminal-window::-webkit-scrollbar-track {
+        background: #0a0a0a;
+    }
+    
+    .terminal-window::-webkit-scrollbar-thumb {
+        background: #00ff41;
+        border-radius: 5px;
+    }
+    
+    .log-line {
+        margin: 3px 0;
+        padding: 2px 5px;
+        border-left: 2px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .log-line:hover {
+        background: rgba(0, 255, 65, 0.1);
+        border-left: 2px solid #00ff41;
+        transform: translateX(5px);
+    }
+    
+    .log-critical {
+        color: #ff0040;
+        text-shadow: 0 0 5px #ff0040;
+        animation: blink 1s infinite;
+    }
+    
+    .log-high {
+        color: #ff6b00;
+    }
+    
+    .log-medium {
+        color: #ffeb3b;
+    }
+    
+    .log-low {
+        color: #00ff41;
+    }
+    
+    @keyframes blink {
+        0%, 50%, 100% { opacity: 1; }
+        25%, 75% { opacity: 0.7; }
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, #1a1f3a 0%, #0f1729 100%);
+        border: 1px solid #00ff41;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 255, 65, 0.2);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+            45deg,
+            transparent,
+            rgba(0, 255, 65, 0.1),
+            transparent
+        );
+        animation: shine 3s infinite;
+    }
+    
+    @keyframes shine {
+        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 30px rgba(0, 255, 65, 0.4);
+        border-color: #0ff;
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        font-family: 'Share Tech Mono', monospace;
+        margin: 10px 0;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .metric-label {
+        color: #888;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-family: 'Share Tech Mono', monospace;
+    }
+    
+    .threat-card {
+        background: linear-gradient(135deg, #2d0a0a 0%, #1a0505 100%);
+        border: 1px solid #ff0040;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 0 15px rgba(255, 0, 64, 0.3);
+        transition: all 0.3s ease;
+        animation: pulse-red 3s infinite;
+    }
+    
+    @keyframes pulse-red {
+        0%, 100% { 
+            box-shadow: 0 0 15px rgba(255, 0, 64, 0.3);
+            border-color: #ff0040;
+        }
+        50% { 
+            box-shadow: 0 0 25px rgba(255, 0, 64, 0.6);
+            border-color: #ff3366;
+        }
+    }
+    
+    .threat-card:hover {
+        transform: scale(1.02);
+    }
+    
+    .status-bar {
+        background: linear-gradient(90deg, #1a1f3a 0%, #0f1729 100%);
+        border: 1px solid #00ff41;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+        font-family: 'Share Tech Mono', monospace;
+    }
+    
+    .command-input {
+        background: #000;
+        border: 2px solid #00ff41;
+        color: #00ff41;
+        font-family: 'Share Tech Mono', monospace;
+        padding: 10px;
+        width: 100%;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
+    
+    .command-input:focus {
+        outline: none;
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.5);
+    }
+    
+    .cyber-btn {
+        background: linear-gradient(135deg, #00ff41 0%, #00aa2b 100%);
+        border: none;
+        color: #000;
+        padding: 12px 24px;
+        font-family: 'Share Tech Mono', monospace;
+        font-weight: bold;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 4px 15px rgba(0, 255, 65, 0.3);
+    }
+    
+    .cyber-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 255, 65, 0.5);
+        background: linear-gradient(135deg, #44ff66 0%, #00cc33 100%);
+    }
+    
+    .cyber-btn-danger {
+        background: linear-gradient(135deg, #ff0040 0%, #cc0033 100%);
+        color: #fff;
+    }
+    
+    .cyber-btn-danger:hover {
+        background: linear-gradient(135deg, #ff3366 0%, #ff0044 100%);
+        box-shadow: 0 6px 20px rgba(255, 0, 64, 0.5);
+    }
+    
+    .network-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+        gap: 5px;
+        padding: 20px;
+        background: #000;
+        border: 2px solid #00ff41;
+        border-radius: 8px;
+    }
+    
+    .network-node {
+        width: 40px;
+        height: 40px;
+        background: #00ff41;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        opacity: 0.3;
+    }
+    
+    .network-node.active {
+        opacity: 1;
+        box-shadow: 0 0 15px #00ff41;
+        animation: node-pulse 2s infinite;
+    }
+    
+    .network-node.threat {
+        background: #ff0040;
+        opacity: 1;
+        box-shadow: 0 0 15px #ff0040;
+        animation: node-pulse 1s infinite;
+    }
+    
+    @keyframes node-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
+    
     .radar-container {
         position: relative;
         width: 100%;
-        height: 300px;
-        background: radial-gradient(circle, #001100 0%, #000000 70%);
-        border: 2px solid #00ff00;
-        border-radius: 50%;
-        overflow: hidden;
-        margin: 20px 0;
+        max-width: 400px;
+        height: 400px;
+        margin: 0 auto;
     }
-    .sweep-line {
+    
+    .radar-circle {
         position: absolute;
-        width: 100%;
-        height: 2px;
-        background: linear-gradient(90deg, transparent 0%, #00ff00 50%, transparent 100%);
+        border: 1px solid rgba(0, 255, 65, 0.3);
+        border-radius: 50%;
         top: 50%;
-        transform-origin: center;
-        animation: sweep 4s linear infinite;
+        left: 50%;
+        transform: translate(-50%, -50%);
     }
-    @keyframes sweep {
+    
+    .radar-sweep {
+        position: absolute;
+        width: 200%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent 0%, #00ff41 50%, transparent 100%);
+        top: 50%;
+        left: 50%;
+        transform-origin: 0% 50%;
+        animation: radar-spin 4s linear infinite;
+    }
+    
+    @keyframes radar-spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-    .threat-dot {
+    
+    .timeline-event {
+        position: relative;
+        padding: 15px;
+        margin: 10px 0;
+        border-left: 3px solid #00ff41;
+        background: linear-gradient(90deg, rgba(0, 255, 65, 0.1) 0%, transparent 100%);
+        transition: all 0.3s ease;
+    }
+    
+    .timeline-event:hover {
+        background: linear-gradient(90deg, rgba(0, 255, 65, 0.2) 0%, transparent 100%);
+        transform: translateX(5px);
+    }
+    
+    .timeline-event::before {
+        content: "●";
         position: absolute;
+        left: -8px;
+        top: 15px;
+        color: #00ff41;
+        font-size: 20px;
+    }
+    
+    .heatmap-cell {
+        display: inline-block;
         width: 12px;
         height: 12px;
-        border-radius: 50%;
-        animation: threat-pulse 2s infinite;
-        transform: translate(-50%, -50%);
+        margin: 1px;
+        border-radius: 2px;
+        transition: all 0.2s ease;
     }
-    @keyframes threat-pulse {
-        0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
-        70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+    
+    .heatmap-cell:hover {
+        transform: scale(1.5);
+        z-index: 10;
     }
-    .live-data-stream {
-        background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.1), transparent);
-        background-size: 200% 100%;
-        animation: stream-flow 3s linear infinite;
-    }
-    @keyframes stream-flow {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-    }
-    .blinking-cursor {
-        animation: blink 1s infinite;
-    }
-    @keyframes blink {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0; }
-    }
-    .stButton > button {
-        background: linear-gradient(135deg, #00ff00 0%, #008800 100%);
-        color: black;
-        border: none;
-        padding: 10px 20px;
-        text-align: center;
-        text-decoration: none;
+    
+    .badge {
         display: inline-block;
-        font-size: 14px;
-        margin: 4px 2px;
-        cursor: pointer;
-        border-radius: 5px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-family: 'Share Tech Mono', monospace;
         font-weight: bold;
-        font-family: 'Courier New', monospace;
-        transition: all 0.3s ease;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+    
+    .badge-critical {
+        background: #ff0040;
+        color: #fff;
+        box-shadow: 0 0 10px rgba(255, 0, 64, 0.5);
+    }
+    
+    .badge-high {
+        background: #ff6b00;
+        color: #fff;
+    }
+    
+    .badge-medium {
+        background: #ffeb3b;
+        color: #000;
+    }
+    
+    .badge-low {
+        background: #00ff41;
+        color: #000;
+    }
+    
+    .progress-bar {
         width: 100%;
+        height: 8px;
+        background: #1a1f3a;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 10px 0;
     }
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #44ff44 0%, #00aa00 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 255, 0, 0.4);
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #00ff41 0%, #00aa2b 100%);
+        border-radius: 4px;
+        transition: width 0.5s ease;
+        box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
     }
-    .stRadio > div {
-        background-color: #1a1a1a;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #00ff00;
+    
+    .ip-address {
+        font-family: 'Share Tech Mono', monospace;
+        color: #0ff;
+        background: rgba(0, 255, 255, 0.1);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.9em;
     }
-    .stRadio > div > label {
-        color: #00ff00 !important;
-        font-family: 'Courier New', monospace;
-    }
-    .stSelectbox > div > div {
-        background-color: #1a1a1a;
-        color: #00ff00;
-        border: 1px solid #00ff00;
-    }
-    .stTextInput > div > div > input {
-        background-color: #1a1a1a;
-        color: #00ff00;
-        border: 1px solid #00ff00;
-        font-family: 'Courier New', monospace;
-    }
-    .stExpander > div {
-        background-color: #1a1a1a;
-        border: 1px solid #00ff00;
+    
+    .stButton>button {
+        font-family: 'Share Tech Mono', monospace !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-class LiveDataStream:
-    """Real-time data streaming engine"""
-    def __init__(self):
-        self.data_queue = queue.Queue()
-        self.running = False
-        self.thread = None
-        
-    def start_streaming(self):
-        """Start the live data streaming thread"""
-        if not self.running:
-            self.running = True
-            self.thread = threading.Thread(target=self._data_generator, daemon=True)
-            self.thread.start()
+class MITREAttack:
+    """MITRE ATT&CK Framework Integration"""
     
-    def stop_streaming(self):
-        """Stop the live data streaming"""
-        self.running = False
-        if self.thread:
-            self.thread.join(timeout=1)
+    TACTICS = {
+        "TA0001": "Initial Access",
+        "TA0002": "Execution",
+        "TA0003": "Persistence",
+        "TA0004": "Privilege Escalation",
+        "TA0005": "Defense Evasion",
+        "TA0006": "Credential Access",
+        "TA0007": "Discovery",
+        "TA0008": "Lateral Movement",
+        "TA0009": "Collection",
+        "TA0010": "Exfiltration",
+        "TA0011": "Command and Control",
+        "TA0040": "Impact"
+    }
     
-    def _data_generator(self):
-        """Generate live data events"""
-        event_types = [
-            "network_activity", "threat_detected", "ids_alert", 
-            "endpoint_event", "firewall_event", "honeypot_interaction"
-        ]
-        
-        while self.running:
-            # Generate random events
-            event_type = random.choice(event_types)
-            event_data = self._generate_event(event_type)
-            self.data_queue.put(event_data)
-            
-            # Random interval between events (0.1 to 2 seconds)
-            time.sleep(random.uniform(0.1, 2))
+    TECHNIQUES = {
+        "T1566": {"name": "Phishing", "tactic": "TA0001"},
+        "T1059": {"name": "Command and Scripting Interpreter", "tactic": "TA0002"},
+        "T1053": {"name": "Scheduled Task/Job", "tactic": "TA0003"},
+        "T1078": {"name": "Valid Accounts", "tactic": "TA0004"},
+        "T1027": {"name": "Obfuscated Files or Information", "tactic": "TA0005"},
+        "T1003": {"name": "OS Credential Dumping", "tactic": "TA0006"},
+        "T1083": {"name": "File and Directory Discovery", "tactic": "TA0007"},
+        "T1021": {"name": "Remote Services", "tactic": "TA0008"},
+        "T1005": {"name": "Data from Local System", "tactic": "TA0009"},
+        "T1041": {"name": "Exfiltration Over C2 Channel", "tactic": "TA0010"},
+        "T1071": {"name": "Application Layer Protocol", "tactic": "TA0011"},
+        "T1486": {"name": "Data Encrypted for Impact", "tactic": "TA0040"}
+    }
     
-    def _generate_event(self, event_type):
-        """Generate specific event types"""
-        base_event = {
-            "event_id": str(uuid.uuid4()),
-            "timestamp": datetime.now(),
-            "type": event_type
+    @staticmethod
+    def get_random_technique():
+        technique_id = random.choice(list(MITREAttack.TECHNIQUES.keys()))
+        technique = MITREAttack.TECHNIQUES[technique_id]
+        return {
+            "id": technique_id,
+            "name": technique["name"],
+            "tactic": MITREAttack.TACTICS[technique["tactic"]]
         }
-        
-        if event_type == "network_activity":
-            base_event.update({
-                "source_ip": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "dest_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "protocol": random.choice(["TCP", "UDP", "HTTP", "HTTPS"]),
-                "bytes": random.randint(100, 10000),
-                "threat_score": random.randint(0, 100)
-            })
-        elif event_type == "threat_detected":
-            base_event.update({
-                "threat_type": random.choice(["Malware", "Phishing", "DDoS", "Data Exfiltration"]),
-                "severity": random.choice(["Low", "Medium", "High", "Critical"]),
-                "source": random.choice(["External", "Internal"]),
-                "confidence": random.randint(70, 99)
-            })
-        elif event_type == "ids_alert":
-            base_event.update({
-                "alert_type": random.choice(["Port Scan", "Brute Force", "SQL Injection", "XSS"]),
-                "severity": random.choice(["Low", "Medium", "High", "Critical"]),
-                "source_ip": f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "action": random.choice(["Blocked", "Allowed", "Quarantined"])
-            })
-        
-        return base_event
-    
-    def get_events(self, max_events=10):
-        """Get recent events from the queue"""
-        events = []
-        while not self.data_queue.empty() and len(events) < max_events:
-            try:
-                events.append(self.data_queue.get_nowait())
-            except queue.Empty:
-                break
-        return events
 
-class AdvancedCyberTerminal:
-    def __init__(self):
-        self.encryption_key = Fernet.generate_key()
-        self.cipher_suite = Fernet(self.encryption_key)
-        self.last_update = datetime.now()
-        self.live_data_running = False
-        self.data_stream = LiveDataStream()
-        self.threat_positions = {}  # Store persistent threat positions
-        self.initialize_cyber_terminal()
-        
-    def initialize_cyber_terminal(self):
-        """Initialize advanced cyber terminal data"""
-        # Enhanced threat intelligence
-        self.threat_intel_db = {
-            "advanced_persistent_threats": [
-                {"name": "APT29", "country": "Russia", "targets": ["Government", "Healthcare"], "tactics": ["Spear Phishing", "Custom Malware"]},
-                {"name": "APT1", "country": "China", "targets": ["Defense", "Technology"], "tactics": ["Watering Hole", "Zero-Day"]},
-                {"name": "Lazarus", "country": "North Korea", "targets": ["Finance", "Cryptocurrency"], "tactics": ["Supply Chain", "Ransomware"]}
-            ],
-            "malware_families": [
-                {"name": "Emotet", "type": "Trojan", "primary_function": "Banking", "propagation": "Email"},
-                {"name": "TrickBot", "type": "Banking Trojan", "primary_function": "Credential Theft", "propagation": "Email"},
-                {"name": "Ryuk", "type": "Ransomware", "primary_function": "Data Encryption", "propagation": "Network"}
-            ],
-            "vulnerabilities": [
-                {"cve": "CVE-2021-44228", "name": "Log4Shell", "severity": "Critical", "affected_software": ["Log4j"]},
-                {"cve": "CVE-2021-34527", "name": "PrintNightmare", "severity": "Critical", "affected_software": ["Windows"]},
-                {"cve": "CVE-2020-1472", "name": "Zerologon", "severity": "Critical", "affected_software": ["Windows Server"]}
-            ]
+class ThreatIntelligence:
+    """Enhanced Threat Intelligence Database"""
+    
+    # Real APT groups with realistic attributes
+    APT_GROUPS = {
+        "APT28": {
+            "country": "Russia",
+            "aliases": ["Fancy Bear", "Sofacy", "Pawn Storm"],
+            "targets": ["Government", "Military", "Security"],
+            "ttps": ["Spear Phishing", "Zero-Day Exploits", "Custom Malware"],
+            "active_since": "2007"
+        },
+        "APT29": {
+            "country": "Russia",
+            "aliases": ["Cozy Bear", "The Dukes"],
+            "targets": ["Government", "Think Tanks", "Healthcare"],
+            "ttps": ["Stealth", "Advanced Malware", "Long-term Persistence"],
+            "active_since": "2008"
+        },
+        "APT41": {
+            "country": "China",
+            "aliases": ["Barium", "Winnti"],
+            "targets": ["Healthcare", "Telecommunications", "Technology"],
+            "ttps": ["Supply Chain Attacks", "Rootkits", "Data Theft"],
+            "active_since": "2012"
+        },
+        "Lazarus": {
+            "country": "North Korea",
+            "aliases": ["Hidden Cobra", "Guardians of Peace"],
+            "targets": ["Financial", "Cryptocurrency", "Media"],
+            "ttps": ["Destructive Attacks", "Financial Fraud", "Ransomware"],
+            "active_since": "2009"
         }
+    }
+    
+    # Realistic malware families
+    MALWARE_FAMILIES = {
+        "Emotet": {
+            "type": "Banking Trojan/Loader",
+            "first_seen": "2014",
+            "capabilities": ["Credential Theft", "Lateral Movement", "Malware Delivery"],
+            "c2_protocol": "HTTP/HTTPS",
+            "persistence": ["Registry", "Scheduled Tasks"]
+        },
+        "TrickBot": {
+            "type": "Banking Trojan",
+            "first_seen": "2016",
+            "capabilities": ["Banking Fraud", "Reconnaissance", "Lateral Movement"],
+            "c2_protocol": "HTTPS",
+            "persistence": ["Services", "Scheduled Tasks"]
+        },
+        "Ryuk": {
+            "type": "Ransomware",
+            "first_seen": "2018",
+            "capabilities": ["File Encryption", "Shadow Copy Deletion", "Network Propagation"],
+            "c2_protocol": "N/A (No C2)",
+            "persistence": ["One-time execution"]
+        },
+        "Cobalt Strike": {
+            "type": "Post-Exploitation Framework",
+            "first_seen": "2012",
+            "capabilities": ["Remote Access", "Lateral Movement", "Credential Dumping"],
+            "c2_protocol": "HTTP/HTTPS/DNS",
+            "persistence": ["Services", "DLL Hijacking"]
+        }
+    }
+    
+    # Real CVEs
+    CRITICAL_CVES = [
+        {
+            "id": "CVE-2021-44228",
+            "name": "Log4Shell",
+            "cvss": 10.0,
+            "description": "Apache Log4j2 Remote Code Execution",
+            "affected": ["Log4j 2.0-beta9 to 2.15.0"],
+            "published": "2021-12-10"
+        },
+        {
+            "id": "CVE-2021-34527",
+            "name": "PrintNightmare",
+            "cvss": 8.8,
+            "description": "Windows Print Spooler RCE",
+            "affected": ["Windows Server", "Windows 10/11"],
+            "published": "2021-07-02"
+        },
+        {
+            "id": "CVE-2020-1472",
+            "name": "Zerologon",
+            "cvss": 10.0,
+            "description": "Netlogon Elevation of Privilege",
+            "affected": ["Windows Server 2008-2019"],
+            "published": "2020-08-17"
+        },
+        {
+            "id": "CVE-2023-23397",
+            "name": "Outlook Elevation of Privilege",
+            "cvss": 9.8,
+            "description": "Microsoft Outlook Privilege Escalation",
+            "affected": ["Microsoft Outlook"],
+            "published": "2023-03-14"
+        }
+    ]
+
+class CyberTerminal:
+    """Advanced Cyber Security Operations Terminal"""
+    
+    def __init__(self):
+        self.session_id = str(uuid.uuid4())[:8]
+        self.start_time = datetime.now()
+        self.initialize_security()
+        self.initialize_data_streams()
         
-        # SOC team with enhanced roles
-        self.cyber_team = {
-            "cyber_commander": {
-                "user_id": "cyber_commander",
-                "password": self.hash_password("cyber123"),
-                "first_name": "Alex",
-                "last_name": "Thorne",
-                "role": "commander",
+    def initialize_security(self):
+        """Initialize security and authentication"""
+        self.operators = {
+            "admin": {
+                "password": self.hash_password("cyber2024"),
+                "name": "Dr. Alex Morgan",
+                "role": "Chief Security Officer",
+                "clearance": "COSMIC TOP SECRET",
+                "badge_id": "CSO-001",
+                "specializations": ["Strategic Defense", "Incident Command", "Threat Intelligence"]
+            },
+            "analyst": {
+                "password": self.hash_password("cyber2024"),
+                "name": "Jordan Chen",
+                "role": "Senior Threat Analyst",
                 "clearance": "TOP SECRET",
-                "specializations": ["Strategic Defense", "Threat Intelligence", "Incident Command"]
+                "badge_id": "STA-042",
+                "specializations": ["Malware Analysis", "Threat Hunting", "Forensics"]
             },
-            "threat_hunter": {
-                "user_id": "threat_hunter",
-                "password": self.hash_password("cyber123"),
-                "first_name": "Jordan",
-                "last_name": "Reyes",
-                "role": "threat_hunter",
+            "hunter": {
+                "password": self.hash_password("cyber2024"),
+                "name": "Taylor Rivera",
+                "role": "Threat Hunter",
                 "clearance": "SECRET",
-                "specializations": ["Malware Analysis", "Digital Forensics", "Threat Hunting"]
-            },
-            "defense_analyst": {
-                "user_id": "defense_analyst",
-                "password": self.hash_password("cyber123"),
-                "first_name": "Casey",
-                "last_name": "Zhang",
-                "role": "defense_analyst",
-                "clearance": "SECRET",
-                "specializations": ["Network Defense", "SIEM Management", "Vulnerability Management"]
+                "badge_id": "THN-087",
+                "specializations": ["Behavioral Analysis", "IOC Development", "SIEM Analytics"]
             }
         }
-        
-        # Initialize all data structures
-        self.security_incidents = []
-        self.live_threats = []
-        self.network_activity = []
-        self.endpoint_telemetry = []
-        self.firewall_logs = []
-        self.ids_alerts = []
-        self.honeypot_data = []
-        self.threat_feeds = []
-        self.defense_actions = []
-        self.cyber_kill_chains = []
-        self.live_events = []
-        
-        # Generate initial data
-        self.generate_live_threats()
-        self.generate_network_activity()
-        self.generate_endpoint_telemetry()
-        self.generate_ids_alerts()
-        self.generate_honeypot_data()
-        
-        # Initialize threat positions
-        self._initialize_threat_positions()
-        
-        # Start live data simulation
-        self.start_live_data_simulation()
-    
-    def _initialize_threat_positions(self):
-        """Initialize positions for all current threats"""
-        for threat in self.live_threats:
-            threat_hash = hashlib.md5(threat["threat_id"].encode()).hexdigest()
-            if threat_hash not in self.threat_positions:
-                # Generate stable position based on threat ID
-                angle = (int(threat_hash[:8], 16) % 360) * (math.pi / 180)
-                distance = 0.3 + (int(threat_hash[8:16], 16) % 70) / 100
-                self.threat_positions[threat_hash] = {
-                    "angle": angle,
-                    "distance": distance,
-                    "threat_id": threat["threat_id"],
-                    "last_seen": datetime.now()
-                }
     
     def hash_password(self, password: str) -> str:
-        """Hash password using SHA-256 with salt"""
-        salt = "cyber_terminal_salt_2024"
+        """Secure password hashing"""
+        salt = "aegis_cyber_terminal_2024"
         return hashlib.sha256(f"{password}{salt}".encode()).hexdigest()
     
-    def verify_password(self, password: str, hashed: str) -> bool:
-        """Verify password against hash"""
-        return self.hash_password(password) == hashed
-    
-    def authenticate_user(self, username: str, password: str) -> bool:
-        """Authenticate cyber team member"""
-        if username in self.cyber_team:
-            user = self.cyber_team[username]
-            if self.verify_password(password, user["password"]):
-                return True
-        return False
-    
-    def start_live_data_simulation(self):
-        """Start live data simulation in background"""
-        if not self.live_data_running:
-            self.live_data_running = True
-            self.data_stream.start_streaming()
-    
-    def update_live_data(self):
-        """Update all live data streams"""
-        # Get new events from data stream
-        new_events = self.data_stream.get_events(20)
-        self.live_events.extend(new_events)
+    def initialize_data_streams(self):
+        """Initialize real-time data streams"""
+        # Live event streams
+        self.event_stream = deque(maxlen=1000)
+        self.network_stream = deque(maxlen=500)
+        self.threat_stream = deque(maxlen=200)
         
-        # Keep only last 1000 events
-        if len(self.live_events) > 1000:
-            self.live_events = self.live_events[-1000:]
+        # Active threats and incidents
+        self.active_threats = []
+        self.incidents = []
+        self.alerts = []
         
-        # Process events and update respective data structures
-        for event in new_events:
-            self._process_live_event(event)
+        # Network topology
+        self.network_segments = self.generate_network_topology()
         
-        # Update timestamps and refresh data
-        self._refresh_network_activity()
-        self._refresh_threats()
-        self._refresh_endpoints()
-        self._refresh_alerts()
-        self._update_threat_positions()
+        # Endpoints
+        self.endpoints = self.generate_endpoints()
         
-        self.last_update = datetime.now()
+        # Generate initial data
+        self.populate_initial_data()
+        
+        # Command history
+        self.command_history = []
     
-    def _process_live_event(self, event):
-        """Process incoming live events"""
-        if event["type"] == "network_activity":
-            self.network_activity.append({
-                "timestamp": event["timestamp"],
-                "source_ip": event["source_ip"],
-                "dest_ip": event["dest_ip"],
-                "protocol": event["protocol"],
-                "bytes_sent": event["bytes"],
-                "threat_score": event["threat_score"],
-                "flagged": event["threat_score"] > 70
-            })
-            
-        elif event["type"] == "threat_detected":
-            new_threat = {
-                "threat_id": f"THREAT-{len(self.live_threats)+1:06d}",
-                "type": event["threat_type"],
-                "severity": event["severity"],
-                "confidence": event["confidence"],
-                "first_detected": event["timestamp"],
-                "last_activity": event["timestamp"],
-                "source_country": random.choice(["Russia", "China", "North Korea", "Iran", "Unknown"]),
-                "target_sector": random.choice(["Finance", "Healthcare", "Government", "Energy", "Technology"]),
-                "indicators": [f"IOC-{random.randint(1000, 9999)}" for _ in range(random.randint(2, 5))],
-                "status": "Active",
-                "assigned_to": random.choice(list(self.cyber_team.keys()))
+    def generate_network_topology(self):
+        """Generate realistic network topology"""
+        segments = {
+            "DMZ": {
+                "subnet": "10.0.1.0/24",
+                "devices": ["Web Server", "Mail Server", "DNS Server"],
+                "risk_level": "High"
+            },
+            "Corporate": {
+                "subnet": "10.0.10.0/24",
+                "devices": ["Workstations", "Printers", "VOIP"],
+                "risk_level": "Medium"
+            },
+            "Servers": {
+                "subnet": "10.0.20.0/24",
+                "devices": ["File Server", "Database", "Application Server"],
+                "risk_level": "Critical"
+            },
+            "Management": {
+                "subnet": "10.0.30.0/24",
+                "devices": ["SIEM", "Firewall", "IDS/IPS"],
+                "risk_level": "Critical"
             }
-            self.live_threats.append(new_threat)
-            
-            # Add to threat positions
-            threat_hash = hashlib.md5(new_threat["threat_id"].encode()).hexdigest()
-            angle = random.uniform(0, 2 * math.pi)
-            distance = random.uniform(0.2, 0.9)
-            self.threat_positions[threat_hash] = {
-                "angle": angle,
-                "distance": distance,
-                "threat_id": new_threat["threat_id"],
-                "last_seen": datetime.now()
-            }
-            
-        elif event["type"] == "ids_alert":
-            self.ids_alerts.append({
-                "alert_id": f"IDS-{len(self.ids_alerts)+1:06d}",
-                "timestamp": event["timestamp"],
-                "attack_type": event["alert_type"],
-                "source_ip": event["source_ip"],
-                "dest_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "severity": event["severity"],
-                "signature": f"SIG-{random.randint(1000, 9999)}",
-                "action_taken": event["action"],
-                "confidence": random.randint(70, 99),
-                "protocol": random.choice(["TCP", "UDP", "HTTP"]),
-                "payload_info": f"Malicious payload detected"
-            })
+        }
+        return segments
     
-    def _update_threat_positions(self):
-        """Update threat positions for radar display"""
-        current_time = datetime.now()
+    def generate_endpoints(self):
+        """Generate endpoint inventory"""
+        endpoints = []
         
-        # Update existing threat positions (slight movement)
-        for threat_hash, position in list(self.threat_positions.items()):
-            # Slight random movement
-            position["angle"] += random.uniform(-0.1, 0.1)
-            position["distance"] += random.uniform(-0.02, 0.02)
-            position["distance"] = max(0.1, min(0.95, position["distance"]))
-            position["last_seen"] = current_time
-        
-        # Remove old threats that are no longer active
-        active_threat_ids = {threat["threat_id"] for threat in self.live_threats if threat["status"] == "Active"}
-        for threat_hash in list(self.threat_positions.keys()):
-            if self.threat_positions[threat_hash]["threat_id"] not in active_threat_ids:
-                del self.threat_positions[threat_hash]
-    
-    def _refresh_network_activity(self):
-        """Refresh network activity with new data"""
-        # Add some random new network activity
-        if random.random() < 0.3:  # 30% chance to add new activity
-            new_activity = {
-                "timestamp": datetime.now() - timedelta(seconds=random.randint(1, 10)),
-                "source_ip": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "dest_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "source_port": random.randint(1024, 65535),
-                "dest_port": random.choice([80, 443, 22, 53, 25, 3389]),
-                "protocol": random.choice(["TCP", "UDP", "HTTP", "HTTPS", "DNS", "SSH"]),
-                "service": random.choice(["Web Server", "Database", "File Share", "DNS Server", "Mail Server"]),
-                "bytes_sent": random.randint(100, 1000000),
-                "bytes_received": random.randint(100, 500000),
-                "packet_count": random.randint(10, 1000),
-                "threat_score": random.randint(0, 100),
-                "geo_location": random.choice(["Internal", "USA", "China", "Russia", "Germany", "Brazil"]),
-                "flagged": random.random() < 0.15
-            }
-            self.network_activity.append(new_activity)
-            
-        # Keep only recent activity (last 500 entries)
-        if len(self.network_activity) > 500:
-            self.network_activity = self.network_activity[-500:]
-    
-    def _refresh_threats(self):
-        """Refresh threat data"""
-        # Update threat statuses and add new threats
-        for threat in self.live_threats:
-            if threat["status"] == "Active" and random.random() < 0.1:
-                threat["last_activity"] = datetime.now()
-                threat["confidence"] = min(99, threat["confidence"] + random.randint(-5, 5))
-                
-                # Occasionally change status
-                if random.random() < 0.05:
-                    threat["status"] = random.choice(["Contained", "Monitoring", "Active"])
-    
-    def _refresh_endpoints(self):
-        """Refresh endpoint telemetry"""
-        for endpoint in self.endpoint_telemetry:
-            if random.random() < 0.2:  # 20% chance to update endpoint
-                endpoint["last_seen"] = datetime.now()
-                endpoint["risk_score"] = max(0, min(100, endpoint["risk_score"] + random.randint(-10, 10)))
-                endpoint["network_connections"] = max(0, endpoint["network_connections"] + random.randint(-5, 5))
-    
-    def _refresh_alerts(self):
-        """Refresh IDS alerts"""
-        # Keep only recent alerts
-        if len(self.ids_alerts) > 200:
-            self.ids_alerts = self.ids_alerts[-200:]
-    
-    def generate_live_threats(self):
-        """Generate live threat intelligence"""
-        threat_types = ["APT Campaign", "Malware Distribution", "Phishing Campaign", "DDoS Attack", "Data Exfiltration"]
-        
-        for i in range(8):
-            threat = {
-                "threat_id": f"THREAT-{i+1:06d}",
-                "type": random.choice(threat_types),
-                "severity": random.choice(["Low", "Medium", "High", "Critical"]),
-                "confidence": random.randint(60, 98),
-                "first_detected": datetime.now() - timedelta(hours=random.randint(1, 72)),
-                "last_activity": datetime.now() - timedelta(minutes=random.randint(1, 60)),
-                "source_country": random.choice(["Russia", "China", "North Korea", "Iran", "Unknown"]),
-                "target_sector": random.choice(["Finance", "Healthcare", "Government", "Energy", "Technology"]),
-                "indicators": [f"Indicator-{j}" for j in range(random.randint(2, 5))],
-                "status": random.choice(["Active", "Monitoring", "Contained"]),
-                "assigned_to": random.choice(list(self.cyber_team.keys()))
-            }
-            self.live_threats.append(threat)
-    
-    def generate_network_activity(self):
-        """Generate realistic network activity"""
-        protocols = ["TCP", "UDP", "HTTP", "HTTPS", "DNS", "SSH", "FTP", "SMB"]
-        services = ["Web Server", "Database", "File Share", "DNS Server", "Mail Server", "VPN"]
-        
-        for i in range(200):
-            activity = {
-                "timestamp": datetime.now() - timedelta(seconds=random.randint(1, 300)),
-                "source_ip": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "dest_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "source_port": random.randint(1024, 65535),
-                "dest_port": random.choice([80, 443, 22, 53, 25, 3389]),
-                "protocol": random.choice(protocols),
-                "service": random.choice(services),
-                "bytes_sent": random.randint(100, 1000000),
-                "bytes_received": random.randint(100, 500000),
-                "packet_count": random.randint(10, 1000),
-                "threat_score": random.randint(0, 100),
-                "geo_location": random.choice(["Internal", "USA", "China", "Russia", "Germany", "Brazil"]),
-                "flagged": random.random() < 0.15
-            }
-            self.network_activity.append(activity)
-    
-    def generate_endpoint_telemetry(self):
-        """Generate endpoint security telemetry"""
-        endpoints = [f"WS-{i:03d}" for i in range(1, 31)] + [f"SRV-{i:03d}" for i in range(1, 11)]
-        processes = ["explorer.exe", "chrome.exe", "winlogon.exe", "svchost.exe", "powershell.exe", "cmd.exe"]
-        
-        for endpoint in endpoints:
-            telemetry = {
-                "endpoint_id": endpoint,
+        # Workstations
+        for i in range(1, 51):
+            endpoints.append({
+                "id": f"WS-{i:03d}",
+                "type": "Workstation",
+                "os": random.choice(["Windows 11 Pro", "Windows 10 Enterprise"]),
+                "ip": f"10.0.10.{i}",
+                "user": f"user{i:03d}",
+                "status": random.choice(["Online", "Online", "Online", "Offline"]),
                 "last_seen": datetime.now() - timedelta(minutes=random.randint(1, 60)),
-                "os_version": random.choice(["Windows 10", "Windows 11", "Windows Server 2019", "Windows Server 2022"]),
-                "antivirus_status": random.choice(["Enabled", "Disabled", "Outdated"]),
-                "threats_detected": random.randint(0, 3),
-                "suspicious_processes": random.sample(processes, random.randint(0, 2)),
-                "network_connections": random.randint(5, 50),
-                "risk_score": random.randint(0, 100),
-                "patch_level": random.choice(["Current", "1-2 weeks behind", "1 month behind", "Critical updates missing"]),
-                "encryption_status": random.choice(["Enabled", "Disabled", "Partial"]),
-                "last_scan": datetime.now() - timedelta(days=random.randint(0, 7))
-            }
-            self.endpoint_telemetry.append(telemetry)
-    
-    def generate_ids_alerts(self):
-        """Generate IDS/IPS alerts"""
-        attack_types = ["Port Scan", "Brute Force", "SQL Injection", "XSS", "DDoS", "Malware Download", "Data Theft"]
-        
-        for i in range(50):
-            alert = {
-                "alert_id": f"IDS-{i+1:06d}",
-                "timestamp": datetime.now() - timedelta(minutes=random.randint(1, 240)),
-                "attack_type": random.choice(attack_types),
-                "source_ip": f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "dest_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "severity": random.choice(["Low", "Medium", "High", "Critical"]),
-                "signature": f"SIG-{random.randint(1000, 9999)}",
-                "action_taken": random.choice(["Allowed", "Blocked", "Alerted"]),
-                "confidence": random.randint(70, 99),
-                "protocol": random.choice(["TCP", "UDP", "HTTP"]),
-                "payload_info": f"Malicious payload detected: {random.choice(['Exploit kit', 'Ransomware', 'Trojan', 'Backdoor'])}"
-            }
-            self.ids_alerts.append(alert)
-    
-    def generate_honeypot_data(self):
-        """Generate honeypot interaction data"""
-        for i in range(15):
-            interaction = {
-                "honeypot_id": f"HONEY-{i+1:03d}",
-                "timestamp": datetime.now() - timedelta(hours=random.randint(1, 48)),
-                "attacker_ip": f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "attacker_country": random.choice(["China", "Russia", "USA", "Brazil", "Vietnam", "Iran"]),
-                "attack_type": random.choice(["SSH Brute Force", "Web Exploit", "Database Attack", "Service Scan"]),
-                "credentials_tried": random.randint(1, 50),
-                "malware_dropped": random.random() < 0.3,
-                "data_captured": random.randint(0, 5000),
-                "threat_level": random.choice(["Low", "Medium", "High"])
-            }
-            self.honeypot_data.append(interaction)
-    
-    def simulate_live_attack(self, attack_type: str):
-        """Simulate a live cyber attack"""
-        attack_id = f"LIVE-ATTACK-{datetime.now().strftime('%H%M%S')}"
-        
-        # Create intensive attack simulation
-        for _ in range(5):
-            self.data_stream.data_queue.put({
-                "event_id": str(uuid.uuid4()),
-                "timestamp": datetime.now(),
-                "type": "threat_detected",
-                "threat_type": attack_type,
-                "severity": "Critical",
-                "source": "External",
-                "confidence": 95
+                "risk_score": random.randint(10, 95),
+                "av_status": random.choice(["Protected", "Protected", "Warning", "Critical"]),
+                "patches_pending": random.randint(0, 15)
             })
         
-        attack = {
-            "attack_id": attack_id,
-            "type": attack_type,
-            "start_time": datetime.now(),
-            "source_ip": f"{random.randint(100, 200)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}",
-            "target": random.choice(["Web Server", "Database", "File Server", "User Workstation"]),
-            "intensity": random.choice(["Low", "Medium", "High"]),
-            "techniques": random.sample(["Port Scanning", "Credential Stuffing", "Lateral Movement", "Data Exfiltration"], 2),
-            "status": "Active"
+        # Servers
+        server_types = ["File Server", "Database", "Web Server", "Mail Server", "App Server"]
+        for i, srv_type in enumerate(server_types, 1):
+            endpoints.append({
+                "id": f"SRV-{i:03d}",
+                "type": "Server",
+                "os": random.choice(["Windows Server 2022", "Windows Server 2019", "Linux Ubuntu 22.04"]),
+                "ip": f"10.0.20.{i}",
+                "service": srv_type,
+                "status": "Online",
+                "last_seen": datetime.now() - timedelta(minutes=random.randint(1, 10)),
+                "risk_score": random.randint(15, 75),
+                "av_status": "Protected",
+                "patches_pending": random.randint(0, 5)
+            })
+        
+        return endpoints
+    
+    def populate_initial_data(self):
+        """Populate with initial threat data"""
+        # Generate initial threats
+        for _ in range(random.randint(8, 15)):
+            self.generate_threat_event()
+        
+        # Generate network events
+        for _ in range(100):
+            self.generate_network_event()
+    
+    def generate_threat_event(self):
+        """Generate realistic threat event"""
+        threat_types = [
+            "Malware Detection",
+            "Suspicious Network Activity", 
+            "Unauthorized Access Attempt",
+            "Data Exfiltration",
+            "Phishing Campaign",
+            "Brute Force Attack",
+            "Port Scan",
+            "Command and Control",
+            "Lateral Movement"
+        ]
+        
+        severities = ["Critical", "High", "Medium", "Low"]
+        severity = random.choices(severities, weights=[10, 25, 40, 25])[0]
+        
+        threat = {
+            "id": f"THR-{len(self.active_threats) + 1:06d}",
+            "type": random.choice(threat_types),
+            "severity": severity,
+            "confidence": random.randint(65, 99),
+            "timestamp": datetime.now() - timedelta(minutes=random.randint(1, 240)),
+            "source_ip": self.generate_external_ip(),
+            "dest_ip": random.choice([e["ip"] for e in self.endpoints if e["status"] == "Online"]),
+            "mitre_technique": MITREAttack.get_random_technique(),
+            "status": random.choice(["Active", "Active", "Active", "Investigating", "Contained"]),
+            "iocs": [self.generate_ioc() for _ in range(random.randint(2, 5))],
+            "affected_assets": random.randint(1, 10),
+            "analyst_assigned": random.choice(list(self.operators.keys())),
+            "notes": []
         }
         
-        self.last_update = datetime.now()
-        return attack_id
+        self.active_threats.append(threat)
+        self.log_event(f"[THREAT] {threat['severity']} - {threat['type']} detected from {threat['source_ip']}", severity)
+        return threat
     
-    def deploy_countermeasures(self, attack_id: str, measures: List[str]):
-        """Deploy countermeasures against an attack"""
-        for threat in self.live_threats:
-            if threat["threat_id"] == attack_id:
-                threat["status"] = "Contained"
-                threat["last_activity"] = datetime.now()
-                
-                # Log defense action
-                defense_action = {
-                    "action_id": f"DEF-{len(self.defense_actions) + 1:06d}",
-                    "timestamp": datetime.now(),
-                    "attack_id": attack_id,
-                    "measures_deployed": measures,
-                    "analyst": st.session_state.user["user_id"],
-                    "effectiveness": random.randint(80, 100),
-                    "status": "Completed"
-                }
-                self.defense_actions.append(defense_action)
-                self.last_update = datetime.now()
-                return True
-        return False
+    def generate_network_event(self):
+        """Generate network traffic event"""
+        protocols = ["TCP", "UDP", "ICMP", "HTTP", "HTTPS", "DNS", "SSH", "RDP", "SMB"]
+        common_ports = [80, 443, 22, 21, 25, 53, 3389, 445, 3306, 8080]
+        
+        event = {
+            "timestamp": datetime.now() - timedelta(seconds=random.randint(1, 300)),
+            "protocol": random.choice(protocols),
+            "source_ip": random.choice([self.generate_external_ip(), self.generate_internal_ip()]),
+            "dest_ip": self.generate_internal_ip(),
+            "source_port": random.randint(1024, 65535),
+            "dest_port": random.choice(common_ports),
+            "bytes": random.randint(100, 1000000),
+            "packets": random.randint(10, 10000),
+            "threat_score": random.randint(0, 100),
+            "action": random.choices(["Allow", "Block", "Alert"], weights=[85, 10, 5])[0]
+        }
+        
+        self.network_stream.append(event)
+        return event
     
-    def calculate_cyber_posture(self):
-        """Calculate overall cyber security posture"""
-        critical_threats = len([t for t in self.live_threats if t["severity"] == "Critical" and t["status"] == "Active"])
-        high_threats = len([t for t in self.live_threats if t["severity"] == "High" and t["status"] == "Active"])
-        active_incidents = len([t for t in self.live_threats if t["status"] == "Active"])
+    def generate_external_ip(self):
+        """Generate realistic external IP"""
+        ranges = [
+            (1, 126),    # Class A
+            (128, 191),  # Class B
+            (192, 223)   # Class C
+        ]
+        first = random.choice(ranges)
+        return f"{random.randint(first[0], first[1])}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
+    
+    def generate_internal_ip(self):
+        """Generate internal IP"""
+        return f"10.0.{random.randint(1, 30)}.{random.randint(1, 254)}"
+    
+    def generate_ioc(self):
+        """Generate Indicator of Compromise"""
+        ioc_types = [
+            ("IP", lambda: self.generate_external_ip()),
+            ("Domain", lambda: f"{random.choice(['malware', 'phish', 'exploit', 'bad'])}{random.randint(100, 999)}.{random.choice(['com', 'net', 'org', 'info'])}"),
+            ("Hash", lambda: hashlib.md5(str(random.random()).encode()).hexdigest()),
+            ("File", lambda: f"{random.choice(['invoice', 'document', 'update', 'report'])}.{random.choice(['exe', 'dll', 'scr', 'bat'])}")
+        ]
         
-        # Calculate posture score (0-100)
-        base_score = 100
-        score = base_score - (critical_threats * 10) - (high_threats * 5) - (active_incidents * 3)
-        score = max(0, min(100, score))
+        ioc_type, generator = random.choice(ioc_types)
+        return {
+            "type": ioc_type,
+            "value": generator(),
+            "confidence": random.randint(70, 99)
+        }
+    
+    def log_event(self, message: str, severity: str = "Info"):
+        """Log event to stream"""
+        event = {
+            "timestamp": datetime.now(),
+            "severity": severity,
+            "message": message
+        }
+        self.event_stream.append(event)
+    
+    def execute_command(self, command: str, user: str):
+        """Execute terminal command"""
+        self.command_history.append({
+            "timestamp": datetime.now(),
+            "user": user,
+            "command": command
+        })
         
-        if score >= 80:
-            return "STRONG", "#00ff00", score
-        elif score >= 60:
-            return "MODERATE", "#ffff00", score
-        elif score >= 40:
-            return "WEAK", "#ff6600", score
+        cmd_parts = command.strip().lower().split()
+        if not cmd_parts:
+            return "Command required"
+        
+        cmd = cmd_parts[0]
+        
+        # Command routing
+        if cmd == "help":
+            return self.cmd_help()
+        elif cmd == "status":
+            return self.cmd_status()
+        elif cmd == "threats":
+            return self.cmd_threats()
+        elif cmd == "scan":
+            return self.cmd_scan(cmd_parts)
+        elif cmd == "block":
+            return self.cmd_block(cmd_parts)
+        elif cmd == "isolate":
+            return self.cmd_isolate(cmd_parts)
+        elif cmd == "investigate":
+            return self.cmd_investigate(cmd_parts)
+        elif cmd == "clear":
+            return "clear"
         else:
-            return "CRITICAL", "#ff0000", score
+            return f"Unknown command: {cmd}. Type 'help' for available commands."
     
-    def get_threat_radar_data(self):
-        """Get current threat positions for radar visualization"""
-        radar_data = []
-        
-        for threat_hash, position in self.threat_positions.items():
-            # Find the corresponding threat for severity information
-            threat_info = next((t for t in self.live_threats if t["threat_id"] == position["threat_id"]), None)
-            if threat_info and threat_info["status"] == "Active":
-                radar_data.append({
-                    "angle": position["angle"],
-                    "distance": position["distance"],
-                    "severity": threat_info["severity"],
-                    "threat_id": position["threat_id"],
-                    "threat_type": threat_info["type"]
-                })
-        
-        return radar_data
-
-def create_threat_radar(terminal):
-    """Create and display the threat radar visualization"""
-    threats = terminal.get_threat_radar_data()
-    
-    # Create radar HTML
-    radar_html = """
-    <div class="radar-container">
-        <div class="sweep-line"></div>
-    """
-    
-    # Add concentric circles for radar range
-    for i in range(1, 4):
-        radius = i * 25
-        radar_html += f"""
-        <div style="position: absolute; width: {radius}%; height: {radius}%; 
-                    border: 1px solid rgba(0, 255, 0, 0.3); border-radius: 50%; 
-                    top: {(100 - radius) / 2}%; left: {(100 - radius) / 2}%;">
-        </div>
+    def cmd_help(self):
+        """Show help"""
+        return """
+╔══════════════════════════════════════════════════════════╗
+║              AEGIS TERMINAL COMMAND REFERENCE            ║
+╠══════════════════════════════════════════════════════════╣
+║ status              - Show system status                 ║
+║ threats             - List active threats                ║
+║ scan <target>       - Initiate security scan            ║
+║ block <ip>          - Block IP address                  ║
+║ isolate <endpoint>  - Isolate endpoint                  ║
+║ investigate <id>    - Investigate threat                ║
+║ clear               - Clear terminal                     ║
+║ help                - Show this help                     ║
+╚══════════════════════════════════════════════════════════╝
         """
     
-    # Add threat dots
-    for threat in threats:
-        # Convert polar coordinates to Cartesian for CSS positioning
-        angle = threat["angle"]
-        distance = threat["distance"]
+    def cmd_status(self):
+        """System status"""
+        critical = len([t for t in self.active_threats if t["severity"] == "Critical"])
+        high = len([t for t in self.active_threats if t["severity"] == "High"])
         
-        # Convert to percentage coordinates (center is 50%, 50%)
-        x = 50 + (distance * 45 * math.cos(angle))
-        y = 50 + (distance * 45 * math.sin(angle))
-        
-        # Set color based on severity
-        color = {
-            "Critical": "#ff0000",
-            "High": "#ff6600", 
-            "Medium": "#ffff00",
-            "Low": "#00ff00"
-        }.get(threat["severity"], "#ffff00")
-        
-        radar_html += f"""
-        <div class="threat-dot" 
-             style="left: {x}%; top: {y}%; background-color: {color};"
-             title="{threat['threat_type']} - {threat['severity']}">
-        </div>
+        return f"""
+SYSTEM STATUS: OPERATIONAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Threats: {len(self.active_threats)} | Critical: {critical} | High: {high}
+Endpoints: {len([e for e in self.endpoints if e['status'] == 'Online'])}/{len(self.endpoints)} Online
+Network: PROTECTED | Firewall: ACTIVE | IDS: ENABLED
+Last Update: {datetime.now().strftime('%H:%M:%S')}
         """
     
-    radar_html += "</div>"
+    def cmd_threats(self):
+        """List threats"""
+        if not self.active_threats:
+            return "No active threats detected"
+        
+        output = "\nACTIVE THREATS:\n" + "="*60 + "\n"
+        for threat in sorted(self.active_threats, key=lambda x: x["timestamp"], reverse=True)[:10]:
+            output += f"{threat['id']} | {threat['severity']:8} | {threat['type']}\n"
+            output += f"  Source: {threat['source_ip']} → {threat['dest_ip']}\n"
+            output += f"  Status: {threat['status']} | Confidence: {threat['confidence']}%\n"
+            output += "-"*60 + "\n"
+        
+        return output
     
-    return radar_html
+    def cmd_scan(self, parts):
+        """Initiate scan"""
+        target = parts[1] if len(parts) > 1 else "all"
+        self.log_event(f"Security scan initiated on {target}", "Info")
+        return f"Initiating security scan on {target}...\nScan ID: SCAN-{random.randint(1000, 9999)}"
+    
+    def cmd_block(self, parts):
+        """Block IP"""
+        if len(parts) < 2:
+            return "Usage: block <ip_address>"
+        
+        ip = parts[1]
+        self.log_event(f"IP {ip} blocked via firewall", "Warning")
+        return f"✓ IP {ip} has been blocked across all network segments"
+    
+    def cmd_isolate(self, parts):
+        """Isolate endpoint"""
+        if len(parts) < 2:
+            return "Usage: isolate <endpoint_id>"
+        
+        endpoint_id = parts[1]
+        self.log_event(f"Endpoint {endpoint_id} isolated", "Warning")
+        return f"✓ Endpoint {endpoint_id} has been isolated from the network"
+    
+    def cmd_investigate(self, parts):
+        """Investigate threat"""
+        if len(parts) < 2:
+            return "Usage: investigate <threat_id>"
+        
+        threat_id = parts[1]
+        self.log_event(f"Investigation started: {threat_id}", "Info")
+        return f"Investigation case opened for {threat_id}\nCase ID: INV-{random.randint(1000, 9999)}"
+    
+    def calculate_security_posture(self):
+        """Calculate overall security posture"""
+        base_score = 100
+        
+        # Threat impact
+        for threat in self.active_threats:
+            if threat["status"] == "Active":
+                if threat["severity"] == "Critical":
+                    base_score -= 15
+                elif threat["severity"] == "High":
+                    base_score -= 8
+                elif threat["severity"] == "Medium":
+                    base_score -= 3
+        
+        # Endpoint health
+        at_risk = len([e for e in self.endpoints if e["risk_score"] > 70])
+        base_score -= at_risk * 2
+        
+        # Normalize
+        score = max(0, min(100, base_score))
+        
+        if score >= 85:
+            return score, "OPTIMAL", "#00ff41"
+        elif score >= 70:
+            return score, "STRONG", "#7fff00"
+        elif score >= 50:
+            return score, "MODERATE", "#ffeb3b"
+        elif score >= 30:
+            return score, "DEGRADED", "#ff6b00"
+        else:
+            return score, "CRITICAL", "#ff0040"
 
-def auto_refresh():
-    """Auto-refresh the dashboard"""
-    if 'last_refresh' not in st.session_state:
-        st.session_state.last_refresh = datetime.now()
-    
-    # Simple auto-refresh by checking time difference
-    current_time = datetime.now()
-    if (current_time - st.session_state.last_refresh).total_seconds() > 3:  # Refresh every 3 seconds
-        st.session_state.last_refresh = current_time
-        st.rerun()
+# Initialize session state
+if 'terminal' not in st.session_state:
+    st.session_state.terminal = CyberTerminal()
+    st.session_state.authenticated = False
+    st.session_state.current_user = None
+    st.session_state.terminal_output = []
 
-def cyber_login():
-    """Display cyber terminal login"""
-    st.markdown('<div class="main-header">🛡️ CYBER TERMINAL v2.0</div>', unsafe_allow_html=True)
-    st.markdown("### ADVANCED THREAT OPERATIONS PLATFORM", unsafe_allow_html=True)
+def render_login():
+    """Render authentication screen"""
+    st.markdown('<div class="main-header">⬢ AEGIS ⬢</div>', unsafe_allow_html=True)
+    st.markdown('<div class="cyber-subheader">CYBER COMMAND CENTER</div>', unsafe_allow_html=True)
     
-    # Terminal-style interface
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.markdown("""
-        <div class='dashboard-panel'>
-            <h4 style='color: #00ff00;'>SYSTEM STATUS: OPERATIONAL</h4>
-            <p style='color: #00ff00;'>🟢 Threat Intelligence: ONLINE</p>
-            <p style='color: #00ff00;'>🟢 Network Defense: ACTIVE</p>
-            <p style='color: #00ff00;'>🟢 Endpoint Protection: ENABLED</p>
-            <p style='color: #00ff00;'>🟢 Incident Response: READY</p>
-            <p style='color: #ffff00;'>Live Data Stream: ACTIVE</p>
-            <p style='color: #ffff00;'>Real-time Monitoring: ENABLED</p>
-        </div>
-        """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        with st.form("cyber_login"):
-            st.markdown("**TERMINAL ACCESS**", unsafe_allow_html=True)
-            username = st.text_input("OPERATOR ID")
-            password = st.text_input("ACCESS CODE", type="password")
-            login_button = st.form_submit_button("🚀 INITIATE CYBER TERMINAL")
+        st.markdown("""
+        <div class="status-bar">
+            <div style="text-align: center;">
+                <h3 style="color: #00ff41; margin: 0;">⬡ AUTHENTICATION REQUIRED ⬡</h3>
+                <p style="color: #888;">Enter credentials to access terminal</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with st.form("login_form"):
+            operator_id = st.text_input("🔐 OPERATOR ID", placeholder="Enter operator ID")
+            access_code = st.text_input("🔑 ACCESS CODE", type="password", placeholder="Enter access code")
             
-            if login_button:
-                if username and password:
-                    terminal = st.session_state.cyber_terminal
-                    if terminal.authenticate_user(username, password):
-                        st.session_state.user = terminal.cyber_team[username]
-                        st.session_state.logged_in = True
-                        st.session_state.last_refresh = terminal.last_update
-                        st.success("ACCESS GRANTED - WELCOME TO CYBER TERMINAL")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                submit = st.form_submit_button("⚡ AUTHENTICATE", use_container_width=True)
+            with col_b:
+                clear = st.form_submit_button("✖ CLEAR", use_container_width=True)
+            
+            if submit:
+                terminal = st.session_state.terminal
+                if operator_id in terminal.operators:
+                    if terminal.hash_password(access_code) == terminal.operators[operator_id]["password"]:
+                        st.session_state.authenticated = True
+                        st.session_state.current_user = operator_id
+                        terminal.log_event(f"Operator {terminal.operators[operator_id]['name']} authenticated", "Info")
+                        st.success("✓ AUTHENTICATION SUCCESSFUL")
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("ACCESS DENIED - INVALID CREDENTIALS")
+                        st.error("✗ ACCESS DENIED - Invalid credentials")
+                        terminal.log_event(f"Failed authentication attempt for {operator_id}", "Warning")
                 else:
-                    st.warning("ENTER CREDENTIALS FOR TERMINAL ACCESS")
+                    st.error("✗ ACCESS DENIED - Unknown operator")
     
     # Demo credentials
     st.markdown("---")
-    st.markdown("**AUTHORIZED PERSONNEL**", unsafe_allow_html=True)
+    st.markdown("### 🎫 AUTHORIZED OPERATORS")
     
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("**CYBER COMMANDER**", unsafe_allow_html=True)
-        st.markdown("ID: `cyber_commander`", unsafe_allow_html=True)
-        st.markdown("CODE: `cyber123`", unsafe_allow_html=True)
-        st.markdown("CLEARANCE: TOP SECRET", unsafe_allow_html=True)
     
-    with col2:
-        st.markdown("**THREAT HUNTER**", unsafe_allow_html=True)
-        st.markdown("ID: `threat_hunter`", unsafe_allow_html=True)
-        st.markdown("CODE: `cyber123`", unsafe_allow_html=True)
-        st.markdown("CLEARANCE: SECRET", unsafe_allow_html=True)
+    terminal = st.session_state.terminal
+    operators_list = list(terminal.operators.items())
     
-    with col3:
-        st.markdown("**DEFENSE ANALYST**", unsafe_allow_html=True)
-        st.markdown("ID: `defense_analyst`", unsafe_allow_html=True)
-        st.markdown("CODE: `cyber123`", unsafe_allow_html=True)
-        st.markdown("CLEARANCE: SECRET", unsafe_allow_html=True)
-
-def cyber_dashboard():
-    """Display main cyber terminal dashboard"""
-    terminal = st.session_state.cyber_terminal
-    user = st.session_state.user
-    
-    # Auto-refresh
-    auto_refresh()
-    
-    # Update live data
-    terminal.update_live_data()
-    
-    # Terminal Header with live timestamp
-    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    st.markdown(f"""
-    <div style='background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 100%); padding: 15px; border-bottom: 3px solid #00ff00; margin-bottom: 20px;'>
-        <h2 style='color: #00ff00; margin: 0; text-align: center;'>
-            🛡️ CYBER TERMINAL ACTIVE | OPERATOR: {user['first_name']} {user['last_name']} 
-            | ROLE: {user['role'].upper()} | CLEARANCE: {user['clearance']}
-        </h2>
-        <p style='color: #00ff00; text-align: center; margin: 5px 0;'>
-            LIVE UPDATE: {current_time} | DATA STREAM: <span class='blinking-cursor'>ACTIVE</span>
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Quick Actions Sidebar
-    with st.sidebar:
-        st.markdown("**QUICK ACTIONS**", unsafe_allow_html=True)
-        
-        if st.button("🔄 FORCE SYSTEM REFRESH", use_container_width=True):
-            st.session_state.last_refresh = datetime.now()
-            st.rerun()
-        
-        attack_type = st.selectbox("Select Attack Type", ["DDoS", "Ransomware", "Data Breach", "APT Intrusion", "Phishing Campaign"])
-        if st.button("🚨 SIMULATE LIVE ATTACK", use_container_width=True):
-            attack_id = terminal.simulate_live_attack(attack_type)
-            st.success(f"Live attack simulated: {attack_id}")
-        
-        if st.button("🛡️ DEPLOY COUNTERMEASURES", use_container_width=True):
-            active_threats = [t for t in terminal.live_threats if t["status"] == "Active"]
-            if active_threats:
-                threat = random.choice(active_threats)
-                measures = ["Network Isolation", "Endpoint Quarantine", "Firewall Rules Update"]
-                if terminal.deploy_countermeasures(threat["threat_id"], measures):
-                    st.success(f"Countermeasures deployed against {threat['threat_id']}")
-            else:
-                st.warning("No active threats to counter")
-        
-        st.markdown("---")
-        st.markdown("**TERMINAL MODULES**", unsafe_allow_html=True)
-        
-        module_options = [
-            "📊 LIVE DASHBOARD", "🌐 NETWORK DEFENSE", "💻 ENDPOINT SECURITY", 
-            "🕵️ THREAT HUNTING", "🔍 DIGITAL FORENSICS", "📡 THREAT INTELLIGENCE",
-            "🚨 INCIDENT RESPONSE", "📈 ANALYTICS & REPORTING"
-        ]
-        
-        module = st.radio("SELECT MODULE", module_options)
-        
-        st.markdown("---")
-        st.markdown("**LIVE DATA STREAM**", unsafe_allow_html=True)
-        
-        # Show recent live events
-        recent_events = terminal.live_events[-5:] if terminal.live_events else []
-        for event in reversed(recent_events):
-            event_color = "#ff0000" if event.get("severity") in ["High", "Critical"] else "#ffff00"
+    for idx, (op_id, op_data) in enumerate(operators_list):
+        with [col1, col2, col3][idx]:
             st.markdown(f"""
-            <div style='font-size: 0.8em; color: {event_color}; margin: 2px 0;'>
-                [{event['timestamp'].strftime('%H:%M:%S')}] {event['type']}
+            <div class="metric-card">
+                <div style="font-size: 1.5rem; margin-bottom: 10px;">👤</div>
+                <strong>{op_data['name']}</strong><br>
+                <span class="metric-label">{op_data['role']}</span><br>
+                <code style="color: #00ff41;">ID: {op_id}</code><br>
+                <code style="color: #0ff;">CODE: cyber2024</code><br>
+                <span class="badge badge-low">{op_data['clearance']}</span>
             </div>
             """, unsafe_allow_html=True)
-        
-        if st.button("🚪 TERMINATE SESSION", use_container_width=True):
-            st.session_state.logged_in = False
-            st.session_state.user = None
-            st.rerun()
-    
-    # Route to selected module
-    if "LIVE DASHBOARD" in module:
-        show_cyber_dashboard(terminal)
-    elif "NETWORK DEFENSE" in module:
-        show_network_defense(terminal)
-    elif "ENDPOINT SECURITY" in module:
-        show_endpoint_security(terminal)
-    elif "THREAT HUNTING" in module:
-        show_threat_hunting(terminal)
-    elif "DIGITAL FORENSICS" in module:
-        show_digital_forensics(terminal)
-    elif "THREAT INTELLIGENCE" in module:
-        show_threat_intelligence(terminal)
-    elif "INCIDENT RESPONSE" in module:
-        show_incident_response(terminal)
-    elif "ANALYTICS" in module:
-        show_analytics_reporting(terminal)
 
-def show_cyber_dashboard(terminal):
-    """Display real-time cyber security dashboard"""
+def render_dashboard():
+    """Render main dashboard"""
+    terminal = st.session_state.terminal
+    user = terminal.operators[st.session_state.current_user]
     
-    # Cyber Posture Indicator
-    posture, posture_color, posture_score = terminal.calculate_cyber_posture()
+    # Header
     st.markdown(f"""
-    <div style='background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); padding: 20px; border: 3px solid {posture_color}; border-radius: 10px; text-align: center; margin-bottom: 20px;'>
-        <h1 style='color: {posture_color}; margin: 0;'>CYBER POSTURE: {posture}</h1>
-        <h2 style='color: {posture_color}; margin: 0;'>SCORE: {posture_score}/100</h2>
-        <p style='color: #00ff00; margin: 5px 0;'>Last Updated: {datetime.now().strftime('%H:%M:%S')}</p>
+    <div style="background: linear-gradient(135deg, #1a1f3a 0%, #0f1729 100%); padding: 20px; border-bottom: 3px solid #00ff41; margin-bottom: 20px; border-radius: 10px;">
+        <h1 style="color: #00ff41; margin: 0; text-align: center; font-family: 'Share Tech Mono', monospace; letter-spacing: 3px;">
+            ⬡ AEGIS CYBER COMMAND CENTER ⬡
+        </h1>
+        <div style="text-align: center; color: #0ff; margin-top: 10px; font-family: 'Share Tech Mono', monospace;">
+            OPERATOR: {user['name']} | {user['role']} | CLEARANCE: {user['clearance']} | SESSION: {terminal.session_id}
+        </div>
+        <div style="text-align: center; color: #888; font-family: 'Share Tech Mono', monospace; font-size: 0.9em;">
+            {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')} | SYSTEM: OPERATIONAL | DEFCON: 3
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
-    # Key Metrics with live updates
+    # Sidebar
+    with st.sidebar:
+        st.markdown("### ⚡ QUICK ACTIONS")
+        
+        if st.button("🔄 REFRESH DATA", use_container_width=True):
+            terminal.generate_threat_event()
+            for _ in range(10):
+                terminal.generate_network_event()
+            st.rerun()
+        
+        if st.button("🚨 SIMULATE ATTACK", use_container_width=True):
+            threat = terminal.generate_threat_event()
+            threat["severity"] = "Critical"
+            threat["status"] = "Active"
+            st.success(f"Attack simulated: {threat['id']}")
+            st.rerun()
+        
+        st.markdown("---")
+        st.markdown("### 🎯 MODULES")
+        
+        module = st.radio("", [
+            "📊 Command Dashboard",
+            "🌐 Network Defense",
+            "💻 Endpoint Security",
+            "🔍 Threat Intelligence",
+            "🚨 Active Incidents",
+            "📡 Live Monitoring",
+            "🎮 Terminal Console",
+            "📈 Analytics"
+        ], label_visibility="collapsed")
+        
+        st.markdown("---")
+        
+        if st.button("🚪 TERMINATE SESSION", use_container_width=True):
+            terminal.log_event(f"Operator {user['name']} logged out", "Info")
+            st.session_state.authenticated = False
+            st.session_state.current_user = None
+            st.rerun()
+    
+    # Route to modules
+    if "Command Dashboard" in module:
+        render_command_dashboard(terminal, user)
+    elif "Network Defense" in module:
+        render_network_defense(terminal, user)
+    elif "Endpoint Security" in module:
+        render_endpoint_security(terminal, user)
+    elif "Threat Intelligence" in module:
+        render_threat_intelligence(terminal, user)
+    elif "Active Incidents" in module:
+        render_active_incidents(terminal, user)
+    elif "Live Monitoring" in module:
+        render_live_monitoring(terminal, user)
+    elif "Terminal Console" in module:
+        render_terminal_console(terminal, user)
+    elif "Analytics" in module:
+        render_analytics(terminal, user)
+
+def render_command_dashboard(terminal, user):
+    """Main command dashboard"""
+    
+    # Security posture
+    score, status, color = terminal.calculate_security_posture()
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #1a1f3a 0%, #0f1729 100%); padding: 30px; border: 3px solid {color}; border-radius: 10px; text-align: center; margin-bottom: 30px; box-shadow: 0 0 30px {color}50;">
+        <h1 style="color: {color}; margin: 0; font-size: 3rem; text-shadow: 0 0 20px {color};">
+            SECURITY POSTURE: {status}
+        </h1>
+        <h2 style="color: {color}; margin: 10px 0; font-size: 2.5rem;">
+            {score}/100
+        </h2>
+        <div class="progress-bar" style="max-width: 600px; margin: 20px auto;">
+            <div class="progress-fill" style="width: {score}%; background: {color};"></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Key metrics
     col1, col2, col3, col4 = st.columns(4)
     
+    critical_threats = len([t for t in terminal.active_threats if t["severity"] == "Critical"])
+    active_incidents = len([t for t in terminal.active_threats if t["status"] == "Active"])
+    endpoints_online = len([e for e in terminal.endpoints if e["status"] == "Online"])
+    network_events = len(terminal.network_stream)
+    
     with col1:
-        critical_threats = len([t for t in terminal.live_threats if t["severity"] == "Critical" and t["status"] == "Active"])
         st.markdown(f"""
-        <div class='metric-glowing'>
-            <h1 style='color: #ff0000;'>{critical_threats}</h1>
-            <p>CRITICAL THREATS</p>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #ff0040;">{critical_threats}</div>
+            <div class="metric-label">CRITICAL THREATS</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
-        active_incidents = len([t for t in terminal.live_threats if t["status"] == "Active"])
         st.markdown(f"""
-        <div class='metric-glowing'>
-            <h1 style='color: #ff6600;'>{active_incidents}</h1>
-            <p>ACTIVE INCIDENTS</p>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #ff6b00;">{active_incidents}</div>
+            <div class="metric-label">ACTIVE INCIDENTS</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
-        high_severity_alerts = len([a for a in terminal.ids_alerts if a["severity"] in ["High", "Critical"]])
         st.markdown(f"""
-        <div class='metric-glowing'>
-            <h1 style='color: #ffff00;'>{high_severity_alerts}</h1>
-            <p>HIGH SEVERITY ALERTS</p>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #00ff41;">{endpoints_online}</div>
+            <div class="metric-label">ENDPOINTS ONLINE</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col4:
-        endpoints_at_risk = len([e for e in terminal.endpoint_telemetry if e["risk_score"] > 70])
         st.markdown(f"""
-        <div class='metric-glowing'>
-            <h1 style='color: #00ff00;'>{endpoints_at_risk}</h1>
-            <p>ENDPOINTS AT RISK</p>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #0ff;">{network_events}</div>
+            <div class="metric-label">NETWORK EVENTS</div>
         </div>
         """, unsafe_allow_html=True)
     
-    # Threat Radar and Live Monitoring
+    # Real-time feeds
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 🎯 LIVE THREAT RADAR")
-        active_threats_count = len([t for t in terminal.live_threats if t["status"] == "Active"])
-        st.markdown(f"**Active Threats Detected: {active_threats_count}**")
+        st.markdown("### 🔥 ACTIVE THREATS")
         
-        # Display the threat radar
-        radar_html = create_threat_radar(terminal)
-        st.markdown(radar_html, unsafe_allow_html=True)
+        active_threats = [t for t in terminal.active_threats if t["status"] == "Active"][:5]
         
-        # Radar legend
-        st.markdown("""
-        <div style='display: flex; justify-content: space-around; margin-top: 10px; font-size: 0.8em;'>
-            <div><span style='color: #ff0000;'>●</span> Critical</div>
-            <div><span style='color: #ff6600;'>●</span> High</div>
-            <div><span style='color: #ffff00;'>●</span> Medium</div>
-            <div><span style='color: #00ff00;'>●</span> Low</div>
-        </div>
-        """, unsafe_allow_html=True)
+        if active_threats:
+            for threat in active_threats:
+                severity_color = {
+                    "Critical": "#ff0040",
+                    "High": "#ff6b00",
+                    "Medium": "#ffeb3b",
+                    "Low": "#00ff41"
+                }[threat["severity"]]
+                
+                st.markdown(f"""
+                <div class="threat-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #fff; font-size: 1.1em;">{threat['type']}</strong><br>
+                            <span style="color: #888;">{threat['id']}</span> | 
+                            <span class="ip-address">{threat['source_ip']}</span> → 
+                            <span class="ip-address">{threat['dest_ip']}</span>
+                        </div>
+                        <div>
+                            <span class="badge badge-{threat['severity'].lower()}">{threat['severity']}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; color: #aaa; font-size: 0.9em;">
+                        MITRE: {threat['mitre_technique']['id']} - {threat['mitre_technique']['name']}<br>
+                        Confidence: {threat['confidence']}% | Assets: {threat['affected_assets']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("No active threats detected")
     
     with col2:
-        st.markdown("### 📡 REAL-TIME THREAT FEED")
+        st.markdown("### 📡 LIVE EVENT STREAM")
         
-        # Real-time threat updates
-        recent_threats = sorted(terminal.live_threats, key=lambda x: x["last_activity"], reverse=True)[:8]
+        st.markdown('<div class="terminal-window">', unsafe_allow_html=True)
         
-        for threat in recent_threats:
-            severity_color = {
-                "Critical": "#ff0000",
-                "High": "#ff6600", 
-                "Medium": "#ffff00",
-                "Low": "#00ff00"
-            }[threat["severity"]]
-            
-            time_diff = (datetime.now() - threat["last_activity"]).total_seconds()
-            is_new = time_diff < 30  # Highlight threats from last 30 seconds
-            new_indicator = " 🆕" if is_new else ""
-            stream_class = "live-data-stream" if is_new else ""
-            
+        events = list(terminal.event_stream)[-15:]
+        for event in reversed(events):
+            severity_class = f"log-{event['severity'].lower()}"
+            timestamp = event['timestamp'].strftime('%H:%M:%S')
             st.markdown(f"""
-            <div class='log-entry {stream_class}'>
-                <span style='color: {severity_color};'>[{threat['last_activity'].strftime('%H:%M:%S')}]</span>
-                {threat['type']} | Source: {threat['source_country']} | Confidence: {threat['confidence']}%{new_indicator}
+            <div class="log-line {severity_class}">
+                [{timestamp}] {event['message']}
             </div>
             """, unsafe_allow_html=True)
-    
-    # Real-time Network Activity Stream
-    st.markdown("### 🌐 LIVE NETWORK ACTIVITY STREAM")
-    
-    # Create a streaming log of network activity
-    recent_activity = sorted(terminal.network_activity, key=lambda x: x["timestamp"], reverse=True)[:15]
-    
-    for activity in recent_activity:
-        flag_icon = "🚩" if activity["flagged"] else "  "
-        threat_color = "#ff0000" if activity["threat_score"] > 80 else "#ffff00" if activity["threat_score"] > 60 else "#00ff00"
         
-        # Highlight very recent activity
-        time_diff = (datetime.now() - activity["timestamp"]).total_seconds()
-        stream_class = "live-data-stream" if time_diff < 10 else ""
-        
-        st.markdown(f"""
-        <div class='log-entry {stream_class}'>
-            <span style='color: #00ff00;'>[{activity['timestamp'].strftime('%H:%M:%S')}]</span>
-            {flag_icon} {activity['source_ip']}:{activity.get('source_port', 'N/A')} → {activity['dest_ip']}:{activity.get('dest_port', 'N/A')}
-            <span style='color: #ffff00;'>{activity['protocol']}</span>
-            <span style='color: {threat_color};'>Threat: {activity['threat_score']}%</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Network activity visualization
+    st.markdown("### 🌐 NETWORK ACTIVITY MAP")
+    
+    # Create network traffic heatmap
+    hours = list(range(24))
+    current_hour = datetime.now().hour
+    
+    # Generate activity data for last 24 hours
+    activity_data = []
+    for hour in hours:
+        count = random.randint(50, 500)
+        activity_data.append(count)
+    
+    fig = go.Figure(data=go.Bar(
+        x=hours,
+        y=activity_data,
+        marker=dict(
+            color=activity_data,
+            colorscale=[[0, '#00ff41'], [0.5, '#ffeb3b'], [1, '#ff0040']],
+            showscale=True
+        )
+    ))
+    
+    fig.update_layout(
+        title="Network Traffic (Last 24 Hours)",
+        xaxis_title="Hour",
+        yaxis_title="Events",
+        paper_bgcolor='#0a0e27',
+        plot_bgcolor='#1a1f3a',
+        font_color='#00ff41',
+        height=300
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
-def show_network_defense(terminal):
-    """Display network defense module"""
+def render_network_defense(terminal, user):
+    """Network defense module"""
     st.markdown("## 🌐 NETWORK DEFENSE OPERATIONS")
     
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([2, 1])
     
     with col1:
         st.markdown("### 🛡️ FIREWALL STATUS")
         
-        # Firewall rules and status
-        firewall_rules = [
-            {"rule": "SSH Access", "status": "Blocked", "hits": random.randint(1000, 5000)},
-            {"rule": "Web Traffic", "status": "Allowed", "hits": random.randint(50000, 100000)},
-            {"rule": "Database Access", "status": "Restricted", "hits": random.randint(200, 1000)},
-            {"rule": "File Sharing", "status": "Blocked", "hits": random.randint(500, 2000)},
-            {"rule": "Remote Desktop", "status": "Restricted", "hits": random.randint(50, 500)}
-        ]
-        
-        for rule in firewall_rules:
-            status_color = "#00ff00" if rule["status"] == "Allowed" else "#ffff00" if rule["status"] == "Restricted" else "#ff0000"
-            st.markdown(f"""
-            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {status_color};'>
-                <strong>{rule['rule']}</strong> | Status: <span style='color: {status_color};'>{rule['status']}</span> | Hits: {rule['hits']}
-            </div>
-            """, unsafe_allow_html=True)
+        # Network segments
+        for segment_name, segment_data in terminal.network_segments.items():
+            risk_color = {
+                "Critical": "#ff0040",
+                "High": "#ff6b00",
+                "Medium": "#ffeb3b",
+                "Low": "#00ff41"
+            }[segment_data["risk_level"]]
+            
+            with st.expander(f"📍 {segment_name} Network - {segment_data['subnet']}", expanded=True):
+                st.markdown(f"""
+                <div style="background: #1a1f3a; padding: 15px; border-left: 4px solid {risk_color}; border-radius: 5px;">
+                    <strong>Risk Level:</strong> <span style="color: {risk_color};">{segment_data['risk_level']}</span><br>
+                    <strong>Devices:</strong> {', '.join(segment_data['devices'])}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Actions
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if st.button(f"🔒 Lock Down {segment_name}", key=f"lock_{segment_name}"):
+                        terminal.log_event(f"{segment_name} network segment locked down", "Warning")
+                        st.success(f"✓ {segment_name} segment isolated")
+                
+                with col_b:
+                    if st.button(f"🔍 Scan {segment_name}", key=f"scan_{segment_name}"):
+                        terminal.log_event(f"Security scan initiated on {segment_name}", "Info")
+                        st.info(f"Scanning {segment_name}...")
     
     with col2:
-        st.markdown("### 📊 NETWORK TRAFFIC ANALYSIS")
+        st.markdown("### 📊 TRAFFIC STATS")
         
         # Protocol distribution
-        protocols = {}
-        for activity in terminal.network_activity[-100:]:  # Last 100 activities
-            protocol = activity["protocol"]
-            protocols[protocol] = protocols.get(protocol, 0) + 1
+        protocols = defaultdict(int)
+        for event in terminal.network_stream:
+            protocols[event['protocol']] += 1
         
         if protocols:
-            fig = px.pie(values=list(protocols.values()), names=list(protocols.keys()), 
-                        title="Live Protocol Distribution")
+            fig = go.Figure(data=[go.Pie(
+                labels=list(protocols.keys()),
+                values=list(protocols.values()),
+                hole=0.4,
+                marker=dict(colors=['#00ff41', '#0ff', '#ffeb3b', '#ff6b00'])
+            )])
+            
             fig.update_layout(
-                paper_bgcolor='#1a1a1a',
-                plot_bgcolor='#1a1a1a',
-                font_color='#00ff00',
+                paper_bgcolor='#0a0e27',
+                font_color='#00ff41',
+                height=300,
                 showlegend=True
             )
+            
             st.plotly_chart(fig, use_container_width=True)
     
     # IDS/IPS Alerts
-    st.markdown("### 🚨 INTRUSION DETECTION SYSTEM")
+    st.markdown("### 🚨 INTRUSION DETECTION ALERTS")
     
-    high_severity_alerts = [a for a in terminal.ids_alerts if a["severity"] in ["High", "Critical"]][:10]
+    # Generate some IDS alerts
+    ids_alerts = []
+    for _ in range(10):
+        alert = {
+            "timestamp": datetime.now() - timedelta(minutes=random.randint(1, 120)),
+            "signature": f"ET-{random.randint(1000, 9999)}",
+            "message": random.choice([
+                "Suspicious Outbound Connection",
+                "Port Scan Detected",
+                "SQL Injection Attempt",
+                "Brute Force Login Attempt",
+                "Malware C2 Communication"
+            ]),
+            "source": terminal.generate_external_ip(),
+            "dest": terminal.generate_internal_ip(),
+            "severity": random.choice(["Critical", "High", "Medium", "Low"]),
+            "action": random.choice(["Blocked", "Alerted", "Allowed"])
+        }
+        ids_alerts.append(alert)
     
-    for alert in high_severity_alerts:
-        severity_color = "#ff0000" if alert["severity"] == "Critical" else "#ff6600"
-        
-        st.markdown(f"""
-        <div class='threat-panel'>
-            <strong>{alert['attack_type']}</strong> | 
-            Source: {alert['source_ip']} → Dest: {alert['dest_ip']} | 
-            Severity: <span style='color: {severity_color};'>{alert['severity']}</span> | 
-            Action: {alert['action_taken']} | 
-            Confidence: {alert['confidence']}%
-        </div>
-        """, unsafe_allow_html=True)
+    # Display as table
+    df = pd.DataFrame(ids_alerts)
+    df['timestamp'] = df['timestamp'].apply(lambda x: x.strftime('%H:%M:%S'))
     
-    # Network Defense Actions
-    st.markdown("### 🎯 ACTIVE DEFENSE MEASURES")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("🔒 BLOCK MALICIOUS IPs", use_container_width=True):
-            st.success("Malicious IPs blocked across all network segments")
-    
-    with col2:
-        if st.button("🛡️ ENABLE DDoS PROTECTION", use_container_width=True):
-            st.success("DDoS protection enabled - monitoring network traffic")
-    
-    with col3:
-        if st.button("📡 SCAN FOR VULNERABILITIES", use_container_width=True):
-            st.success("Network vulnerability scan initiated")
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True
+    )
 
-def show_endpoint_security(terminal):
-    """Display endpoint security module"""
+def render_endpoint_security(terminal, user):
+    """Endpoint security module"""
     st.markdown("## 💻 ENDPOINT SECURITY MANAGEMENT")
     
-    # Endpoint Risk Dashboard
-    st.markdown("### 📈 ENDPOINT RISK ASSESSMENT")
-    
-    high_risk_endpoints = [e for e in terminal.endpoint_telemetry if e["risk_score"] > 70]
-    medium_risk_endpoints = [e for e in terminal.endpoint_telemetry if 40 <= e["risk_score"] <= 70]
-    low_risk_endpoints = [e for e in terminal.endpoint_telemetry if e["risk_score"] < 40]
-    
+    # Risk overview
     col1, col2, col3, col4 = st.columns(4)
     
+    critical_endpoints = len([e for e in terminal.endpoints if e["risk_score"] > 80])
+    high_risk = len([e for e in terminal.endpoints if 60 < e["risk_score"] <= 80])
+    medium_risk = len([e for e in terminal.endpoints if 40 < e["risk_score"] <= 60])
+    low_risk = len([e for e in terminal.endpoints if e["risk_score"] <= 40])
+    
     with col1:
-        st.metric("Total Endpoints", len(terminal.endpoint_telemetry))
-    
+        st.metric("🔴 Critical", critical_endpoints)
     with col2:
-        st.metric("High Risk", len(high_risk_endpoints), delta_color="inverse")
-    
+        st.metric("🟠 High Risk", high_risk)
     with col3:
-        st.metric("Medium Risk", len(medium_risk_endpoints))
-    
+        st.metric("🟡 Medium Risk", medium_risk)
     with col4:
-        st.metric("Low Risk", len(low_risk_endpoints))
+        st.metric("🟢 Low Risk", low_risk)
     
-    # Endpoint Details
-    st.markdown("### 🔍 ENDPOINT DETAILS")
+    # Endpoint list
+    st.markdown("### 📋 ENDPOINT INVENTORY")
     
-    for endpoint in high_risk_endpoints[:5]:
-        risk_color = "#ff0000" if endpoint["risk_score"] > 80 else "#ff6600"
-        
-        with st.expander(f"🚨 {endpoint['endpoint_id']} - Risk Score: {endpoint['risk_score']}"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.write(f"**OS:** {endpoint['os_version']}")
-                st.write(f"**AV Status:** {endpoint['antivirus_status']}")
-                st.write(f"**Threats Detected:** {endpoint['threats_detected']}")
-            
-            with col2:
-                st.write(f"**Patch Level:** {endpoint['patch_level']}")
-                st.write(f"**Encryption:** {endpoint['encryption_status']}")
-                st.write(f"**Last Scan:** {endpoint['last_scan'].strftime('%Y-%m-%d')}")
-            
-            if endpoint["suspicious_processes"]:
-                st.write(f"**Suspicious Processes:** {', '.join(endpoint['suspicious_processes'])}")
-    
-    # Endpoint Protection Actions
-    st.markdown("### 🛡️ ENDPOINT PROTECTION ACTIONS")
-    
+    # Filter options
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if high_risk_endpoints:
-            endpoint_to_quarantine = st.selectbox("Select Endpoint", [e["endpoint_id"] for e in high_risk_endpoints])
-            if st.button("🔄 QUARANTINE ENDPOINT"):
-                st.success(f"Endpoint {endpoint_to_quarantine} quarantined for investigation")
-        else:
-            st.info("No high-risk endpoints available")
-    
+        filter_type = st.selectbox("Type", ["All", "Workstation", "Server"])
     with col2:
-        if st.button("🔍 INITIATE DEEP SCAN", use_container_width=True):
-            st.success("Deep malware scan initiated on all endpoints")
-    
+        filter_status = st.selectbox("Status", ["All", "Online", "Offline"])
     with col3:
-        if st.button("📊 UPDATE SIGNATURES", use_container_width=True):
-            st.success("Antivirus signatures updated across all endpoints")
-
-def show_threat_hunting(terminal):
-    """Display threat hunting module"""
-    st.markdown("## 🕵️ ADVANCED THREAT HUNTING")
+        filter_risk = st.selectbox("Risk", ["All", "Critical", "High", "Medium", "Low"])
     
-    col1, col2 = st.columns(2)
+    # Filter endpoints
+    filtered = terminal.endpoints.copy()
     
-    with col1:
-        st.markdown("### 🎯 HUNTING QUERIES")
+    if filter_type != "All":
+        filtered = [e for e in filtered if e["type"] == filter_type]
+    
+    if filter_status != "All":
+        filtered = [e for e in filtered if e["status"] == filter_status]
+    
+    if filter_risk != "All":
+        risk_ranges = {
+            "Critical": (80, 100),
+            "High": (60, 80),
+            "Medium": (40, 60),
+            "Low": (0, 40)
+        }
+        min_risk, max_risk = risk_ranges[filter_risk]
+        filtered = [e for e in filtered if min_risk < e["risk_score"] <= max_risk]
+    
+    # Display endpoints
+    for endpoint in filtered[:20]:
+        risk_color = "#ff0040" if endpoint["risk_score"] > 80 else "#ff6b00" if endpoint["risk_score"] > 60 else "#ffeb3b" if endpoint["risk_score"] > 40 else "#00ff41"
         
-        hunting_queries = [
-            "Processes with network connections to known malicious IPs",
-            "Suspicious PowerShell execution patterns",
-            "Unusual scheduled task creations",
-            "Registry modifications by unknown processes",
-            "Lateral movement attempts using WMI"
-        ]
-        
-        for query in hunting_queries:
-            st.markdown(f"""
-            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #ffff00;'>
-                🔍 {query}
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Custom hunting query
-        custom_query = st.text_input("Enter custom hunting query:")
-        if st.button("🚀 EXECUTE HUNT"):
-            if custom_query:
-                st.success(f"Executing hunt: {custom_query}")
-                # Simulate hunting results
-                st.info("Hunt completed: 3 suspicious activities found")
-    
-    with col2:
-        st.markdown("### 📊 HUNTING RESULTS")
-        
-        # Simulated hunting results
-        hunting_results = [
-            {"type": "Suspicious Process", "endpoint": "WS-023", "confidence": 85},
-            {"type": "Network Anomaly", "endpoint": "SRV-005", "confidence": 92},
-            {"type": "Fileless Attack", "endpoint": "WS-042", "confidence": 78},
-            {"type": "Credential Theft", "endpoint": "WS-015", "confidence": 88}
-        ]
-        
-        for result in hunting_results:
-            confidence_color = "#00ff00" if result["confidence"] > 90 else "#ffff00" if result["confidence"] > 75 else "#ff6600"
-            
-            st.markdown(f"""
-            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border: 1px solid {confidence_color};'>
-                <strong>{result['type']}</strong><br>
-                Endpoint: {result['endpoint']} | 
-                Confidence: <span style='color: {confidence_color};'>{result['confidence']}%</span>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Threat Hunting Techniques
-    st.markdown("### 🔧 HUNTING METHODOLOGIES")
-    
-    techniques = [
-        "🔍 Hypothesis-Driven Investigation",
-        "📈 Anomaly-Based Detection", 
-        "🔗 IOC-Based Hunting",
-        "🧠 Behavioral Analysis",
-        "📊 ML-Powered Threat Detection"
-    ]
-    
-    for technique in techniques:
-        st.markdown(f"""
-        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #00ff00;'>
-            {technique}
-        </div>
-        """, unsafe_allow_html=True)
-
-def show_digital_forensics(terminal):
-    """Display digital forensics module"""
-    st.markdown("## 🔍 DIGITAL FORENSICS LAB")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 🧩 FORENSIC ARTIFACTS")
-        
-        artifacts = [
-            {"type": "Memory Dump", "size": "4.2 GB", "analysis": "Completed", "findings": 3},
-            {"type": "Disk Image", "size": "128 GB", "analysis": "In Progress", "findings": 12},
-            {"type": "Network Capture", "size": "2.1 GB", "analysis": "Completed", "findings": 8},
-            {"type": "Log Files", "size": "856 MB", "analysis": "Pending", "findings": 0}
-        ]
-        
-        for artifact in artifacts:
-            status_color = "#00ff00" if artifact["analysis"] == "Completed" else "#ffff00" if artifact["analysis"] == "In Progress" else "#ff6600"
-            
-            st.markdown(f"""
-            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {status_color};'>
-                <strong>{artifact['type']}</strong><br>
-                Size: {artifact['size']} | 
-                Status: <span style='color: {status_color};'>{artifact['analysis']}</span> | 
-                Findings: {artifact['findings']}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("### 🔬 MALWARE ANALYSIS")
-        
-        malware_samples = [
-            {"name": "Trojan.Emotet", "risk": "High", "analysis": "Behavioral analysis completed"},
-            {"name": "Ransomware.Ryuk", "risk": "Critical", "analysis": "Reverse engineering in progress"},
-            {"name": "Backdoor.DarkComet", "risk": "High", "analysis": "Network analysis completed"}
-        ]
-        
-        for malware in malware_samples:
-            risk_color = "#ff0000" if malware["risk"] == "Critical" else "#ff6600"
-            
-            st.markdown(f"""
-            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border: 1px solid {risk_color};'>
-                <strong>{malware['name']}</strong><br>
-                Risk: <span style='color: {risk_color};'>{malware['risk']}</span><br>
-                {malware['analysis']}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Forensic Tools
-    st.markdown("### 🛠️ FORENSIC TOOLS")
-    
-    tools = [
-        "Autopsy - Digital forensics platform",
-        "Volatility - Memory forensics",
-        "Wireshark - Network analysis", 
-        "FTK Imager - Disk imaging",
-        "Sleuth Kit - File system analysis"
-    ]
-    
-    for tool in tools:
-        st.markdown(f"""
-        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #00ff00;'>
-            🛠️ {tool}
-        </div>
-        """, unsafe_allow_html=True)
-
-def show_threat_intelligence(terminal):
-    """Display threat intelligence module"""
-    st.markdown("## 📡 THREAT INTELLIGENCE PLATFORM")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 🌍 GLOBAL THREAT LANDSCAPE")
-        
-        # APT Groups
-        st.markdown("#### Advanced Persistent Threats")
-        for apt in terminal.threat_intel_db["advanced_persistent_threats"]:
-            st.markdown(f"""
-            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #ff0000;'>
-                <strong>{apt['name']}</strong> | Country: {apt['country']}<br>
-                Targets: {', '.join(apt['targets'])}<br>
-                Tactics: {', '.join(apt['tactics'])}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("### 🦠 MALWARE INTELLIGENCE")
-        
-        for malware in terminal.threat_intel_db["malware_families"]:
-            st.markdown(f"""
-            <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #ff6600;'>
-                <strong>{malware['name']}</strong> | Type: {malware['type']}<br>
-                Function: {malware['primary_function']}<br>
-                Propagation: {malware['propagation']}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Vulnerability Intelligence
-    st.markdown("### 🕳️ VULNERABILITY INTELLIGENCE")
-    
-    for vuln in terminal.threat_intel_db["vulnerabilities"]:
-        severity_color = "#ff0000" if vuln["severity"] == "Critical" else "#ff6600"
-        
-        st.markdown(f"""
-        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {severity_color};'>
-            <strong>{vuln['cve']} - {vuln['name']}</strong><br>
-            Severity: <span style='color: {severity_color};'>{vuln['severity']}</span><br>
-            Affected: {', '.join(vuln['affected_software'])}
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Threat Intelligence Feeds
-    st.markdown("### 📊 INTELLIGENCE FEEDS")
-    
-    feeds = [
-        {"name": "AlienVault OTX", "status": "Active", "updates": "2 hours ago"},
-        {"name": "MISP Threat Sharing", "status": "Active", "updates": "1 hour ago"},
-        {"name": "CISA Automated Indicators", "status": "Active", "updates": "30 minutes ago"},
-        {"name": "Commercial Intel Feed", "status": "Active", "updates": "15 minutes ago"}
-    ]
-    
-    for feed in feeds:
-        st.markdown(f"""
-        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #00ff00;'>
-            📡 {feed['name']} | Status: {feed['status']} | Last Update: {feed['updates']}
-        </div>
-        """, unsafe_allow_html=True)
-
-def show_incident_response(terminal):
-    """Display incident response module"""
-    st.markdown("## 🚨 INCIDENT RESPONSE COMMAND")
-    
-    # Active Incidents
-    active_incidents = [t for t in terminal.live_threats if t["status"] == "Active"]
-    
-    st.markdown(f"### 🔥 ACTIVE INCIDENTS: {len(active_incidents)}")
-    
-    for incident in active_incidents:
-        severity_color = {"Critical": "#ff0000", "High": "#ff6600", "Medium": "#ffff00", "Low": "#00ff00"}[incident["severity"]]
-        
-        with st.expander(f"🚨 {incident['threat_id']} - {incident['type']} - Severity: {incident['severity']}"):
+        with st.expander(f"{'🖥️' if endpoint['type'] == 'Workstation' else '🖧'} {endpoint['id']} - {endpoint['ip']} - Risk: {endpoint['risk_score']}"):
             col1, col2 = st.columns(2)
             
             with col1:
-                st.write(f"**First Detected:** {incident['first_detected'].strftime('%Y-%m-%d %H:%M')}")
-                st.write(f"**Source Country:** {incident['source_country']}")
-                st.write(f"**Target Sector:** {incident['target_sector']}")
-                st.write(f"**Confidence:** {incident['confidence']}%")
+                st.markdown(f"""
+                **Type:** {endpoint['type']}<br>
+                **OS:** {endpoint['os']}<br>
+                **IP:** <span class="ip-address">{endpoint['ip']}</span><br>
+                **Status:** {endpoint['status']}
+                """, unsafe_allow_html=True)
             
             with col2:
-                st.write(f"**Assigned To:** {incident['assigned_to']}")
-                st.write(f"**Status:** {incident['status']}")
-                st.write("**Indicators:**")
-                for indicator in incident["indicators"]:
-                    st.write(f"  - {indicator}")
+                st.markdown(f"""
+                **Risk Score:** <span style="color: {risk_color};">{endpoint['risk_score']}</span><br>
+                **AV Status:** {endpoint['av_status']}<br>
+                **Patches Pending:** {endpoint['patches_pending']}<br>
+                **Last Seen:** {endpoint['last_seen'].strftime('%H:%M:%S')}
+                """, unsafe_allow_html=True)
             
-            # Response Actions
-            st.markdown("#### 🛡️ RESPONSE ACTIONS")
+            # Actions
+            col_a, col_b, col_c = st.columns(3)
             
-            col1, col2, col3 = st.columns(3)
+            with col_a:
+                if st.button("🔄 Scan", key=f"scan_{endpoint['id']}"):
+                    st.info(f"Scanning {endpoint['id']}...")
+            
+            with col_b:
+                if st.button("🔒 Isolate", key=f"isolate_{endpoint['id']}"):
+                    terminal.log_event(f"Endpoint {endpoint['id']} isolated", "Warning")
+                    st.warning(f"✓ {endpoint['id']} isolated")
+            
+            with col_c:
+                if st.button("📊 Details", key=f"details_{endpoint['id']}"):
+                    st.info("Detailed analysis coming soon...")
+
+def render_threat_intelligence(terminal, user):
+    """Threat intelligence module"""
+    st.markdown("## 📡 THREAT INTELLIGENCE PLATFORM")
+    
+    tab1, tab2, tab3 = st.tabs(["🌍 APT Groups", "🦠 Malware Families", "🕳️ Vulnerabilities"])
+    
+    with tab1:
+        st.markdown("### Advanced Persistent Threats")
+        
+        for apt_name, apt_data in ThreatIntelligence.APT_GROUPS.items():
+            with st.expander(f"🎯 {apt_name} - {apt_data['country']}", expanded=False):
+                st.markdown(f"""
+                <div class="threat-card">
+                    <strong>Aliases:</strong> {', '.join(apt_data['aliases'])}<br>
+                    <strong>Active Since:</strong> {apt_data['active_since']}<br>
+                    <strong>Primary Targets:</strong> {', '.join(apt_data['targets'])}<br>
+                    <strong>TTPs:</strong> {', '.join(apt_data['ttps'])}
+                </div>
+                """, unsafe_allow_html=True)
+    
+    with tab2:
+        st.markdown("### Malware Families")
+        
+        for malware_name, malware_data in ThreatIntelligence.MALWARE_FAMILIES.items():
+            with st.expander(f"🦠 {malware_name}", expanded=False):
+                st.markdown(f"""
+                <div style="background: #1a1f3a; padding: 15px; border-left: 4px solid #ff6b00; border-radius: 5px;">
+                    <strong>Type:</strong> {malware_data['type']}<br>
+                    <strong>First Seen:</strong> {malware_data['first_seen']}<br>
+                    <strong>Capabilities:</strong> {', '.join(malware_data['capabilities'])}<br>
+                    <strong>C2 Protocol:</strong> {malware_data['c2_protocol']}<br>
+                    <strong>Persistence:</strong> {', '.join(malware_data['persistence'])}
+                </div>
+                """, unsafe_allow_html=True)
+    
+    with tab3:
+        st.markdown("### Critical Vulnerabilities")
+        
+        for cve in ThreatIntelligence.CRITICAL_CVES:
+            severity_color = "#ff0040" if cve["cvss"] >= 9.0 else "#ff6b00"
+            
+            with st.expander(f"🕳️ {cve['id']} - {cve['name']} (CVSS: {cve['cvss']})", expanded=False):
+                st.markdown(f"""
+                <div style="background: #1a1f3a; padding: 15px; border-left: 4px solid {severity_color}; border-radius: 5px;">
+                    <strong>CVSS Score:</strong> <span style="color: {severity_color};">{cve['cvss']}</span><br>
+                    <strong>Description:</strong> {cve['description']}<br>
+                    <strong>Affected:</strong> {', '.join(cve['affected'])}<br>
+                    <strong>Published:</strong> {cve['published']}
+                </div>
+                """, unsafe_allow_html=True)
+
+def render_active_incidents(terminal, user):
+    """Active incidents module"""
+    st.markdown("## 🚨 INCIDENT RESPONSE")
+    
+    active_threats = [t for t in terminal.active_threats if t["status"] == "Active"]
+    
+    if not active_threats:
+        st.success("✓ No active incidents requiring attention")
+        return
+    
+    st.warning(f"⚠️ {len(active_threats)} ACTIVE INCIDENTS REQUIRE ATTENTION")
+    
+    for threat in active_threats:
+        severity_color = {
+            "Critical": "#ff0040",
+            "High": "#ff6b00",
+            "Medium": "#ffeb3b",
+            "Low": "#00ff41"
+        }[threat["severity"]]
+        
+        with st.expander(f"🚨 {threat['id']} - {threat['type']} [{threat['severity']}]", expanded=True):
+            col1, col2 = st.columns([2, 1])
             
             with col1:
-                if st.button("🛑 CONTAIN THREAT", key=f"contain_{incident['threat_id']}"):
-                    measures = ["Network Isolation", "Endpoint Quarantine", "Firewall Rules Update"]
-                    if terminal.deploy_countermeasures(incident["threat_id"], measures):
-                        st.success("Threat contained successfully!")
-                        st.rerun()
+                st.markdown(f"""
+                <div class="threat-card">
+                    <h4 style="color: {severity_color}; margin-top: 0;">INCIDENT DETAILS</h4>
+                    <strong>Type:</strong> {threat['type']}<br>
+                    <strong>Severity:</strong> <span class="badge badge-{threat['severity'].lower()}">{threat['severity']}</span><br>
+                    <strong>Confidence:</strong> {threat['confidence']}%<br>
+                    <strong>Detected:</strong> {threat['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}<br>
+                    <strong>Source:</strong> <span class="ip-address">{threat['source_ip']}</span><br>
+                    <strong>Target:</strong> <span class="ip-address">{threat['dest_ip']}</span><br>
+                    <strong>Affected Assets:</strong> {threat['affected_assets']}<br>
+                    <strong>Analyst:</strong> {threat['analyst_assigned']}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("**MITRE ATT&CK Mapping:**")
+                st.markdown(f"""
+                <div style="background: #1a1f3a; padding: 10px; border-left: 3px solid #0ff; border-radius: 5px;">
+                    <strong>{threat['mitre_technique']['id']}</strong> - {threat['mitre_technique']['name']}<br>
+                    <strong>Tactic:</strong> {threat['mitre_technique']['tactic']}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("**Indicators of Compromise:**")
+                for ioc in threat['iocs']:
+                    st.markdown(f"- **{ioc['type']}:** `{ioc['value']}` (Confidence: {ioc['confidence']}%)")
             
             with col2:
-                if st.button("🔍 INVESTIGATE", key=f"investigate_{incident['threat_id']}"):
-                    st.info("Initiating deep investigation...")
-            
-            with col3:
-                if st.button("📋 ESCALATE", key=f"escalate_{incident['threat_id']}"):
-                    st.warning("Incident escalated to Cyber Commander")
-    
-    # Incident Response Playbooks
-    st.markdown("### 📚 RESPONSE PLAYBOOKS")
-    
-    playbooks = [
-        "Ransomware Attack Response",
-        "Data Breach Response", 
-        "DDoS Attack Mitigation",
-        "Insider Threat Investigation",
-        "Advanced Threat Containment"
-    ]
-    
-    for playbook in playbooks:
-        st.markdown(f"""
-        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid #00ff00;'>
-            📖 {playbook}
-        </div>
-        """, unsafe_allow_html=True)
+                st.markdown("### 🎯 RESPONSE ACTIONS")
+                
+                if st.button("🔒 CONTAIN", key=f"contain_{threat['id']}", use_container_width=True):
+                    threat['status'] = "Contained"
+                    terminal.log_event(f"Threat {threat['id']} contained", "Info")
+                    st.success("✓ Threat contained")
+                    st.rerun()
+                
+                if st.button("🚫 BLOCK SOURCE IP", key=f"block_{threat['id']}", use_container_width=True):
+                    terminal.log_event(f"IP {threat['source_ip']} blocked", "Warning")
+                    st.success(f"✓ {threat['source_ip']} blocked")
+                
+                if st.button("🔍 DEEP INVESTIGATION", key=f"investigate_{threat['id']}", use_container_width=True):
+                    st.info("Investigation initiated...")
+                
+                if st.button("📋 GENERATE REPORT", key=f"report_{threat['id']}", use_container_width=True):
+                    st.info("Generating incident report...")
+                
+                st.markdown("### 📝 NOTES")
+                note = st.text_area("Add note", key=f"note_{threat['id']}", height=100)
+                if st.button("💾 Save Note", key=f"save_note_{threat['id']}"):
+                    threat['notes'].append({
+                        "timestamp": datetime.now(),
+                        "analyst": user['name'],
+                        "note": note
+                    })
+                    st.success("Note saved")
 
-def show_analytics_reporting(terminal):
-    """Display analytics and reporting module"""
+def render_live_monitoring(terminal, user):
+    """Live monitoring module"""
+    st.markdown("## 📡 LIVE NETWORK MONITORING")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🌊 NETWORK TRAFFIC STREAM")
+        
+        st.markdown('<div class="terminal-window">', unsafe_allow_html=True)
+        
+        recent_network = list(terminal.network_stream)[-20:]
+        for event in reversed(recent_network):
+            threat_class = "log-critical" if event['threat_score'] > 80 else "log-high" if event['threat_score'] > 60 else "log-medium" if event['threat_score'] > 40 else "log-low"
+            action_icon = "🚫" if event['action'] == "Block" else "⚠️" if event['action'] == "Alert" else "✓"
+            
+            st.markdown(f"""
+            <div class="log-line {threat_class}">
+                [{event['timestamp'].strftime('%H:%M:%S')}] {action_icon} {event['protocol']} | 
+                {event['source_ip']}:{event['source_port']} → {event['dest_ip']}:{event['dest_port']} | 
+                {event['bytes']} bytes | Threat: {event['threat_score']}%
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### 🎯 THREAT DETECTION STREAM")
+        
+        st.markdown('<div class="terminal-window">', unsafe_allow_html=True)
+        
+        threat_events = [e for e in terminal.event_stream if e['severity'] in ['Critical', 'High', 'Warning']][-20:]
+        for event in reversed(threat_events):
+            severity_class = f"log-{event['severity'].lower()}"
+            
+            st.markdown(f"""
+            <div class="log-line {severity_class}">
+                [{event['timestamp'].strftime('%H:%M:%S')}] [{event['severity']}] {event['message']}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Auto-refresh
+    if st.button("🔄 AUTO-REFRESH (5s)", use_container_width=True):
+        time.sleep(5)
+        terminal.generate_network_event()
+        st.rerun()
+    
+    # Traffic visualization
+    st.markdown("### 📊 REAL-TIME TRAFFIC ANALYSIS")
+    
+    # Generate time series data
+    timestamps = []
+    traffic_volume = []
+    
+    for i in range(60):
+        timestamps.append((datetime.now() - timedelta(seconds=60-i)).strftime('%H:%M:%S'))
+        traffic_volume.append(random.randint(100, 1000))
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=timestamps,
+        y=traffic_volume,
+        mode='lines',
+        name='Traffic Volume',
+        line=dict(color='#00ff41', width=2),
+        fill='tozeroy',
+        fillcolor='rgba(0, 255, 65, 0.2)'
+    ))
+    
+    fig.update_layout(
+        title="Network Traffic (Last 60 seconds)",
+        xaxis_title="Time",
+        yaxis_title="Packets/sec",
+        paper_bgcolor='#0a0e27',
+        plot_bgcolor='#1a1f3a',
+        font_color='#00ff41',
+        height=300,
+        showlegend=False
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_terminal_console(terminal, user):
+    """Interactive terminal console"""
+    st.markdown("## 🎮 CYBER TERMINAL CONSOLE")
+    
+    st.markdown("""
+    <div class="status-bar">
+        <strong>AEGIS TERMINAL v2.0</strong> | Session: {0} | Operator: {1}
+    </div>
+    """.format(terminal.session_id, user['name']), unsafe_allow_html=True)
+    
+    # Terminal output
+    st.markdown('<div class="terminal-window">', unsafe_allow_html=True)
+    
+    # Display output history
+    for output in st.session_state.terminal_output:
+        st.markdown(f'<div class="log-line">{output}</div>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Command input
+    col1, col2 = st.columns([4, 1])
+    
+    with col1:
+        command = st.text_input(
+            "Command",
+            key="terminal_command",
+            placeholder="Enter command (type 'help' for commands)",
+            label_visibility="collapsed"
+        )
+    
+    with col2:
+        execute = st.button("⚡ EXECUTE", use_container_width=True)
+    
+    if execute and command:
+        # Add command to output
+        st.session_state.terminal_output.append(f"<span style='color: #0ff;'>operator@aegis:~$</span> {command}")
+        
+        # Execute command
+        result = terminal.execute_command(command, user['name'])
+        
+        if result == "clear":
+            st.session_state.terminal_output = []
+        else:
+            # Add result to output
+            st.session_state.terminal_output.append(result)
+        
+        # Keep last 50 commands
+        if len(st.session_state.terminal_output) > 50:
+            st.session_state.terminal_output = st.session_state.terminal_output[-50:]
+        
+        st.rerun()
+    
+    # Command history
+    if terminal.command_history:
+        with st.expander("📜 Command History"):
+            for cmd in reversed(terminal.command_history[-10:]):
+                st.markdown(f"`[{cmd['timestamp'].strftime('%H:%M:%S')}]` {cmd['user']}: `{cmd['command']}`")
+
+def render_analytics(terminal, user):
+    """Analytics and reporting module"""
     st.markdown("## 📈 CYBER SECURITY ANALYTICS")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 📊 SECURITY METRICS")
+        st.markdown("### 📊 THREAT TRENDS")
         
-        # Threat trend over time
-        dates = [datetime.now() - timedelta(days=x) for x in range(30, 0, -1)]
-        threats_per_day = [random.randint(5, 25) for _ in range(30)]
+        # Generate trend data
+        days = [(datetime.now() - timedelta(days=x)).strftime('%m-%d') for x in range(30, 0, -1)]
+        critical_threats = [random.randint(0, 5) for _ in range(30)]
+        high_threats = [random.randint(2, 10) for _ in range(30)]
+        medium_threats = [random.randint(5, 15) for _ in range(30)]
         
-        fig = px.line(x=dates, y=threats_per_day, title="Daily Threat Detection")
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatter(x=days, y=critical_threats, name='Critical', mode='lines', line=dict(color='#ff0040', width=2)))
+        fig.add_trace(go.Scatter(x=days, y=high_threats, name='High', mode='lines', line=dict(color='#ff6b00', width=2)))
+        fig.add_trace(go.Scatter(x=days, y=medium_threats, name='Medium', mode='lines', line=dict(color='#ffeb3b', width=2)))
+        
         fig.update_layout(
-            paper_bgcolor='#1a1a1a',
-            plot_bgcolor='#1a1a1a',
-            font_color='#00ff00',
+            title="Threat Detection Trends (30 Days)",
             xaxis_title="Date",
-            yaxis_title="Threats Detected"
+            yaxis_title="Count",
+            paper_bgcolor='#0a0e27',
+            plot_bgcolor='#1a1f3a',
+            font_color='#00ff41',
+            height=350
         )
+        
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown("### 🎯 ATTACK VECTOR ANALYSIS")
+        st.markdown("### 🎯 ATTACK VECTORS")
         
-        attack_vectors = {
-            "Phishing": 35,
-            "Malware": 25,
-            "DDoS": 15,
-            "Insider Threat": 10,
-            "Vulnerability Exploit": 15
-        }
+        attack_types = {}
+        for threat in terminal.active_threats:
+            attack_types[threat['type']] = attack_types.get(threat['type'], 0) + 1
         
-        fig = px.pie(values=list(attack_vectors.values()), names=list(attack_vectors.keys()))
+        if attack_types:
+            fig = go.Figure(data=[go.Bar(
+                x=list(attack_types.values()),
+                y=list(attack_types.keys()),
+                orientation='h',
+                marker=dict(color='#00ff41')
+            )])
+            
+            fig.update_layout(
+                title="Attack Type Distribution",
+                xaxis_title="Count",
+                yaxis_title="Attack Type",
+                paper_bgcolor='#0a0e27',
+                plot_bgcolor='#1a1f3a',
+                font_color='#00ff41',
+                height=350
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # MITRE ATT&CK heatmap
+    st.markdown("### 🗺️ MITRE ATT&CK TECHNIQUE COVERAGE")
+    
+    techniques_used = defaultdict(int)
+    for threat in terminal.active_threats:
+        techniques_used[threat['mitre_technique']['name']] += 1
+    
+    if techniques_used:
+        fig = go.Figure(data=go.Bar(
+            x=list(techniques_used.keys()),
+            y=list(techniques_used.values()),
+            marker=dict(
+                color=list(techniques_used.values()),
+                colorscale=[[0, '#00ff41'], [0.5, '#ffeb3b'], [1, '#ff0040']]
+            )
+        ))
+        
         fig.update_layout(
-            paper_bgcolor='#1a1a1a',
-            plot_bgcolor='#1a1a1a',
-            font_color='#00ff00'
+            title="MITRE ATT&CK Techniques Detected",
+            xaxis_title="Technique",
+            yaxis_title="Occurrences",
+            paper_bgcolor='#0a0e27',
+            plot_bgcolor='#1a1f3a',
+            font_color='#00ff41',
+            height=400
         )
+        
         st.plotly_chart(fig, use_container_width=True)
     
-    # Security Reports
-    st.markdown("### 📄 SECURITY REPORTS")
-    
-    reports = [
-        {"name": "Daily Security Briefing", "period": "Last 24 hours", "status": "Generated"},
-        {"name": "Weekly Threat Assessment", "period": "Last 7 days", "status": "Pending"},
-        {"name": "Monthly Compliance Report", "period": "Last 30 days", "status": "Generated"},
-        {"name": "Quarterly Security Review", "period": "Last 90 days", "status": "In Progress"}
-    ]
-    
-    for report in reports:
-        status_color = "#00ff00" if report["status"] == "Generated" else "#ffff00" if report["status"] == "In Progress" else "#ff6600"
-        
-        st.markdown(f"""
-        <div style='background-color: #1a1a1a; padding: 10px; margin: 5px 0; border-left: 4px solid {status_color};'>
-            <strong>{report['name']}</strong><br>
-            Period: {report['period']} | 
-            Status: <span style='color: {status_color};'>{report['status']}</span>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Report Generation
-    st.markdown("### 🚀 GENERATE REPORTS")
+    # Export options
+    st.markdown("### 📥 EXPORT OPTIONS")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("📊 DAILY REPORT", use_container_width=True):
-            st.success("Daily security report generated and sent to stakeholders")
+        if st.button("📄 DAILY REPORT", use_container_width=True):
+            st.success("✓ Daily report generated")
     
     with col2:
-        if st.button("📈 WEEKLY ASSESSMENT", use_container_width=True):
-            st.success("Weekly threat assessment compiled")
+        if st.button("📊 THREAT SUMMARY", use_container_width=True):
+            st.success("✓ Threat summary exported")
     
     with col3:
-        if st.button("🛡️ COMPLIANCE REPORT", use_container_width=True):
-            st.success("Compliance report generated for audit")
+        if st.button("🔍 FORENSIC PACKAGE", use_container_width=True):
+            st.success("✓ Forensic data packaged")
 
 def main():
-    # Initialize cyber terminal in session state
-    if 'cyber_terminal' not in st.session_state:
-        st.session_state.cyber_terminal = AdvancedCyberTerminal()
+    """Main application entry point"""
     
-    # Initialize login state
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
-        st.session_state.user = None
-        st.session_state.last_refresh = datetime.now()
-    
-    # Check if user is logged in
-    if not st.session_state.logged_in:
-        cyber_login()
+    # Check authentication
+    if not st.session_state.authenticated:
+        render_login()
     else:
-        cyber_dashboard()
+        render_dashboard()
+        
+        # Auto-generate events periodically
+        if random.random() < 0.1:  # 10% chance per render
+            st.session_state.terminal.generate_network_event()
 
 if __name__ == "__main__":
     main()
