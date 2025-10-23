@@ -4,1553 +4,788 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import json
 import hashlib
-import time
 import random
-from typing import Dict, List, Any
+import time
+from collections import deque
 import warnings
-import math
 
 warnings.filterwarnings('ignore')
 
-# Page configuration
 st.set_page_config(
-    page_title="CYBER TERMINAL v3.0",
+    page_title="Aegis Enterprise IT Command",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Advanced Cyber Terminal CSS with enhanced animations
+# Advanced Enterprise Styling
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 3.2rem;
-        color: #00ff00;
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+    
+    .stApp {
+        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+        color: #e0e7ff;
+        font-family: 'Rajdhani', sans-serif;
+    }
+    
+    .enterprise-header {
+        background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #6366f1 100%);
+        padding: 2rem;
+        border-radius: 12px;
         text-align: center;
-        margin-bottom: 1rem;
-        font-family: 'Courier New', monospace;
-        text-shadow: 0 0 15px #00ff00;
-        background: linear-gradient(90deg, #00ff00, #ffff00, #00ff00, #00ffff, #00ff00);
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px rgba(79, 70, 229, 0.3);
+    }
+    
+    .enterprise-header h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 0 20px rgba(255,255,255,0.5);
+    }
+    
+    .status-panel {
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid #475569;
+        border-radius: 10px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    
+    .metric-enterprise {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1px solid #334155;
+        border-left: 4px solid #6366f1;
+        border-radius: 8px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .metric-enterprise:hover {
+        border-left-color: #818cf8;
+        transform: translateX(5px);
+        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+    
+    .metric-value-enterprise {
+        font-size: 3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #818cf8 0%, #c4b5fd 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        background-size: 300% 100%;
-        animation: gradient-shift 3s ease-in-out infinite, glow 2s ease-in-out infinite alternate;
     }
-    @keyframes gradient-shift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    @keyframes glow {
-        from { text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
-        to { text-shadow: 0 0 15px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00; }
-    }
-    .cyber-terminal {
-        background-color: #0a0a0a;
-        color: #00ff00;
-        font-family: 'Courier New', monospace;
-    }
-    .dashboard-panel {
-        background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
-        border: 1px solid #00ff00;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 10px 0;
-        box-shadow: 0 0 30px rgba(0, 255, 0, 0.15);
-        transition: all 0.3s ease;
-    }
-    .dashboard-panel:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 40px rgba(0, 255, 0, 0.25);
-    }
-    .threat-panel {
-        background: linear-gradient(135deg, #2a0a0a 0%, #1a0505 100%);
-        border: 1px solid #ff0000;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 10px 0;
-        animation: pulse-red 2s infinite;
-        transition: all 0.3s ease;
-    }
-    .threat-panel:hover {
-        transform: scale(1.02);
-    }
-    @keyframes pulse-red {
-        0% { border-color: #ff0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
-        50% { border-color: #ff4444; box-shadow: 0 0 25px rgba(255, 0, 0, 0.6); }
-        100% { border-color: #ff0000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
-    }
-    .defense-panel {
-        background: linear-gradient(135deg, #0a2a0a 0%, #051a05 100%);
-        border: 1px solid #00ff00;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 10px 0;
-        animation: pulse-green 2s infinite;
-        transition: all 0.3s ease;
-    }
-    .defense-panel:hover {
-        transform: scale(1.02);
-    }
-    @keyframes pulse-green {
-        0% { border-color: #00ff00; box-shadow: 0 0 10px rgba(0, 255, 0, 0.3); }
-        50% { border-color: #44ff44; box-shadow: 0 0 25px rgba(0, 255, 0, 0.6); }
-        100% { border-color: #00ff00; box-shadow: 0 0 10px rgba(0, 255, 0, 0.3); }
-    }
-    .metric-glowing {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-        border: 1px solid #00ff00;
-        border-radius: 12px;
-        padding: 25px;
-        text-align: center;
-        animation: metric-glow 3s infinite;
-        transition: all 0.3s ease;
-    }
-    .metric-glowing:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 0 30px rgba(0, 255, 0, 0.4);
-    }
-    @keyframes metric-glow {
-        0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.3); }
-        50% { box-shadow: 0 0 25px rgba(0, 255, 0, 0.6); }
-        100% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.3); }
-    }
-    .log-entry {
-        font-family: 'Courier New', monospace;
-        font-size: 0.9em;
-        color: #00ff00;
-        border-bottom: 1px solid #333;
-        padding: 0.5rem 0;
-        transition: all 0.3s ease;
-        border-left: 3px solid transparent;
-    }
-    .log-entry:hover {
-        background-color: #1a1a1a;
-        transform: translateX(8px);
-        border-left: 3px solid #00ff00;
-    }
-    .terminal-output {
-        background-color: #000000;
-        border: 2px solid #00ff00;
+    
+    .live-feed {
+        background: #0f172a;
+        border: 1px solid #334155;
         border-radius: 8px;
-        padding: 20px;
-        font-family: 'Courier New', monospace;
-        color: #00ff00;
+        padding: 1rem;
         height: 500px;
         overflow-y: auto;
-        margin: 10px 0;
-        box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-    }
-    .cyber-button {
-        background: linear-gradient(135deg, #00ff00, #00cc00);
-        color: #000;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
         font-family: 'Courier New', monospace;
-        font-weight: bold;
-        cursor: pointer;
+    }
+    
+    .live-feed::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .live-feed::-webkit-scrollbar-thumb {
+        background: #6366f1;
+        border-radius: 4px;
+    }
+    
+    .badge-enterprise {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    
+    .badge-critical { background: #7f1d1d; color: #fca5a5; }
+    .badge-high { background: #7c2d12; color: #fdba74; }
+    .badge-medium { background: #713f12; color: #fde047; }
+    .badge-low { background: #14532d; color: #86efac; }
+    .badge-operational { background: #1e3a8a; color: #93c5fd; }
+    
+    .infrastructure-card {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin: 1rem 0;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 255, 0, 0.3);
     }
-    .cyber-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 255, 0, 0.4);
-        background: linear-gradient(135deg, #00ff00, #00ff88);
-    }
-    .cyber-card {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-        border: 1px solid #333;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 10px 0;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    }
-    .cyber-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0, 255, 0, 0.2);
-        border-color: #00ff00;
-    }
-    .progress-cyber {
-        height: 10px;
-        border-radius: 5px;
-        background: #333;
-        overflow: hidden;
-    }
-    .progress-cyber-bar {
-        height: 100%;
-        background: linear-gradient(90deg, #00ff00, #ffff00);
-        border-radius: 5px;
-        transition: width 0.5s ease;
-    }
-    .floating-element {
-        animation: float 6s ease-in-out infinite;
-    }
-    @keyframes float {
-        0% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-        100% { transform: translateY(0px); }
-    }
-    .neon-border {
-        position: relative;
-        border: 2px solid #00ff00;
-        border-radius: 12px;
-        padding: 20px;
-    }
-    .neon-border::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, #00ff00, #ffff00, #00ff00, #00ffff, #00ff00);
-        border-radius: 14px;
-        z-index: -1;
-        animation: border-glow 3s linear infinite;
-        background-size: 400% 400%;
-    }
-    @keyframes border-glow {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    .hologram-effect {
-        background: linear-gradient(135deg, 
-            rgba(0, 255, 0, 0.1) 0%, 
-            rgba(0, 255, 255, 0.1) 25%, 
-            rgba(255, 255, 0, 0.1) 50%, 
-            rgba(255, 0, 255, 0.1) 75%, 
-            rgba(0, 255, 0, 0.1) 100%);
-        background-size: 400% 400%;
-        animation: hologram 8s ease infinite;
-    }
-    @keyframes hologram {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+    
+    .infrastructure-card:hover {
+        border-color: #6366f1;
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
     }
 </style>
 """, unsafe_allow_html=True)
 
-class AdvancedCyberTerminal:
+class EnterpriseITPlatform:
+    """Enterprise IT Infrastructure Management Platform"""
+    
     def __init__(self):
-        self.last_update = datetime.now()
-        self.live_data_running = False
-        self.alert_history = []
-        self.system_health = {
-            "cpu_usage": 45,
-            "memory_usage": 62,
-            "network_throughput": 1.2,
-            "storage_utilization": 78,
-            "threat_detection_rate": 94
-        }
-        self.initialize_cyber_terminal()
+        self.company = "Global Tech Enterprises"
+        self.init_enterprise_data()
+    
+    def init_enterprise_data(self):
+        """Initialize enterprise infrastructure"""
         
-    def initialize_cyber_terminal(self):
-        """Initialize advanced cyber terminal data"""
-        # Enhanced threat intelligence with more APT groups
-        self.threat_intel_db = {
-            "advanced_persistent_threats": [
-                {"name": "APT29", "country": "Russia", "targets": ["Government", "Healthcare"], "tactics": ["Spear Phishing", "Custom Malware"], "risk_level": "High"},
-                {"name": "APT1", "country": "China", "targets": ["Defense", "Technology"], "tactics": ["Watering Hole", "Zero-Day"], "risk_level": "Critical"},
-                {"name": "Lazarus", "country": "North Korea", "targets": ["Finance", "Cryptocurrency"], "tactics": ["Supply Chain", "Ransomware"], "risk_level": "High"},
-                {"name": "Equation Group", "country": "USA", "targets": ["Critical Infrastructure"], "tactics": ["Advanced Malware", "Zero-Day"], "risk_level": "Critical"},
-                {"name": "Fancy Bear", "country": "Russia", "targets": ["Political", "Military"], "tactics": ["Phishing", "Credential Theft"], "risk_level": "High"}
-            ],
-            "malware_families": [
-                {"name": "Emotet", "type": "Trojan", "primary_function": "Banking", "propagation": "Email", "detection_rate": 85},
-                {"name": "TrickBot", "type": "Banking Trojan", "primary_function": "Credential Theft", "propagation": "Email", "detection_rate": 92},
-                {"name": "Ryuk", "type": "Ransomware", "primary_function": "Data Encryption", "propagation": "Network", "detection_rate": 78},
-                {"name": "WannaCry", "type": "Ransomware", "primary_function": "Data Encryption", "propagation": "Worm", "detection_rate": 95},
-                {"name": "Stuxnet", "type": "Worm", "primary_function": "Industrial Sabotage", "propagation": "USB", "detection_rate": 99}
-            ],
-            "vulnerabilities": [
-                {"cve": "CVE-2021-44228", "name": "Log4Shell", "severity": "Critical", "affected_software": ["Log4j"], "patch_status": "Available"},
-                {"cve": "CVE-2021-34527", "name": "PrintNightmare", "severity": "Critical", "affected_software": ["Windows"], "patch_status": "Available"},
-                {"cve": "CVE-2020-1472", "name": "Zerologon", "severity": "Critical", "affected_software": ["Windows Server"], "patch_status": "Available"},
-                {"cve": "CVE-2022-22965", "name": "Spring4Shell", "severity": "High", "affected_software": ["Spring Framework"], "patch_status": "Available"}
-            ]
-        }
-        
-        # Enhanced SOC team with more roles
-        self.cyber_team = {
-            "cyber_commander": {
-                "user_id": "cyber_commander",
-                "password": self.hash_password("cyber123"),
-                "first_name": "Alex",
-                "last_name": "Thorne",
-                "role": "commander",
-                "clearance": "TOP SECRET",
-                "specializations": ["Strategic Defense", "Threat Intelligence", "Incident Command"],
-                "avatar": "👨‍💼"
+        # IT Leadership
+        self.it_leadership = {
+            "cto": {
+                "username": "cto",
+                "password": self.hash("Enterprise@2024"),
+                "name": "Dr. Marcus Chen",
+                "title": "Chief Technology Officer",
+                "department": "Executive Leadership"
             },
-            "threat_hunter": {
-                "user_id": "threat_hunter",
-                "password": self.hash_password("cyber123"),
-                "first_name": "Jordan",
-                "last_name": "Reyes",
-                "role": "threat_hunter",
-                "clearance": "SECRET",
-                "specializations": ["Malware Analysis", "Digital Forensics", "Threat Hunting"],
-                "avatar": "👩‍💻"
+            "it_director": {
+                "username": "it_director",
+                "password": self.hash("Enterprise@2024"),
+                "name": "Jennifer Walsh",
+                "title": "IT Infrastructure Director",
+                "department": "IT Operations"
             },
-            "defense_analyst": {
-                "user_id": "defense_analyst",
-                "password": self.hash_password("cyber123"),
-                "first_name": "Casey",
-                "last_name": "Zhang",
-                "role": "defense_analyst",
-                "clearance": "SECRET",
-                "specializations": ["Network Defense", "SIEM Management", "Vulnerability Management"],
-                "avatar": "👨‍🔬"
-            },
-            "forensics_expert": {
-                "user_id": "forensics_expert",
-                "password": self.hash_password("cyber123"),
-                "first_name": "Morgan",
-                "last_name": "Kowalski",
-                "role": "forensics_expert",
-                "clearance": "SECRET",
-                "specializations": ["Digital Forensics", "Memory Analysis", "Incident Response"],
-                "avatar": "👩‍🔍"
+            "security_officer": {
+                "username": "security_officer",
+                "password": self.hash("Enterprise@2024"),
+                "name": "David Kumar",
+                "title": "Chief Security Officer",
+                "department": "InfoSec"
             }
         }
         
-        # Initialize all data structures
-        self.security_incidents = []
-        self.live_threats = []
-        self.network_activity = []
-        self.endpoint_telemetry = []
-        self.firewall_logs = []
-        self.ids_alerts = []
-        self.honeypot_data = []
-        self.threat_feeds = []
-        self.defense_actions = []
-        self.cyber_kill_chains = []
-        self.iot_devices = []
-        self.cloud_assets = []
-        
-        # Generate initial data
-        self.generate_live_threats()
-        self.generate_network_activity()
-        self.generate_endpoint_telemetry()
-        self.generate_ids_alerts()
-        self.generate_honeypot_data()
-        self.generate_iot_devices()
-        self.generate_cloud_assets()
-        
-        # Start live data simulation
-        self.start_live_data_simulation()
-    
-    def hash_password(self, password: str) -> str:
-        """Hash password using SHA-256 with salt"""
-        salt = "cyber_terminal_salt_2024"
-        return hashlib.sha256(f"{password}{salt}".encode()).hexdigest()
-    
-    def verify_password(self, password: str, hashed: str) -> bool:
-        """Verify password against hash"""
-        return self.hash_password(password) == hashed
-    
-    def authenticate_user(self, username: str, password: str) -> bool:
-        """Authenticate cyber team member"""
-        if username in self.cyber_team:
-            user = self.cyber_team[username]
-            if self.verify_password(password, user["password"]):
-                return True
-        return False
-    
-    def start_live_data_simulation(self):
-        """Start live data simulation in background"""
-        if not self.live_data_running:
-            self.live_data_running = True
-    
-    def generate_live_threats(self):
-        """Generate live threat intelligence"""
-        threat_types = ["APT Campaign", "Malware Distribution", "Phishing Campaign", "DDoS Attack", "Data Exfiltration", "Insider Threat", "Supply Chain Attack"]
-        
-        for i in range(15):
-            threat = {
-                "threat_id": f"THREAT-{i+1:06d}",
-                "type": random.choice(threat_types),
-                "severity": random.choice(["Low", "Medium", "High", "Critical"]),
-                "confidence": random.randint(60, 98),
-                "first_detected": datetime.now() - timedelta(hours=random.randint(1, 72)),
-                "last_activity": datetime.now() - timedelta(minutes=random.randint(1, 60)),
-                "source_country": random.choice(["Russia", "China", "North Korea", "Iran", "Unknown", "USA", "Brazil"]),
-                "target_sector": random.choice(["Finance", "Healthcare", "Government", "Energy", "Technology", "Education"]),
-                "indicators": [f"Indicator-{j}" for j in range(random.randint(2, 5))],
-                "status": random.choice(["Active", "Monitoring", "Contained", "Eradicated"]),
-                "assigned_to": random.choice(list(self.cyber_team.keys())),
-                "kill_chain_phase": random.choice(["Reconnaissance", "Weaponization", "Delivery", "Exploitation", "Installation", "C2", "Actions"]),
-                "impact_score": random.randint(1, 10)
-            }
-            self.live_threats.append(threat)
-    
-    def generate_network_activity(self):
-        """Generate realistic network activity"""
-        protocols = ["TCP", "UDP", "HTTP", "HTTPS", "DNS", "SSH", "FTP", "SMB", "RDP", "ICMP"]
-        services = ["Web Server", "Database", "File Share", "DNS Server", "Mail Server", "VPN", "API Gateway", "Load Balancer"]
-        
-        # Clear existing and generate fresh data
-        self.network_activity = []
-        
-        for i in range(800):
-            activity = {
-                "timestamp": datetime.now() - timedelta(seconds=random.randint(1, 300)),
-                "source_ip": f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "dest_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "source_port": random.randint(1024, 65535),
-                "dest_port": random.choice([80, 443, 22, 53, 25, 3389, 8080, 8443]),
-                "protocol": random.choice(protocols),
-                "service": random.choice(services),
-                "bytes_sent": random.randint(100, 1000000),
-                "bytes_received": random.randint(100, 500000),
-                "packet_count": random.randint(10, 1000),
-                "threat_score": random.randint(0, 100),
-                "geo_location": random.choice(["Internal", "USA", "China", "Russia", "Germany", "Brazil", "India", "Japan"]),
-                "flagged": random.random() < 0.15,
-                "encrypted": random.random() < 0.7
-            }
-            self.network_activity.append(activity)
-    
-    def generate_endpoint_telemetry(self):
-        """Generate endpoint security telemetry"""
-        endpoints = [f"WS-{i:03d}" for i in range(1, 81)] + [f"SRV-{i:03d}" for i in range(1, 31)] + [f"MOB-{i:03d}" for i in range(1, 21)]
-        processes = ["explorer.exe", "chrome.exe", "winlogon.exe", "svchost.exe", "powershell.exe", "cmd.exe", "notepad.exe", "teams.exe"]
-        
-        self.endpoint_telemetry = []
-        
-        for endpoint in endpoints:
-            telemetry = {
-                "endpoint_id": endpoint,
-                "last_seen": datetime.now() - timedelta(minutes=random.randint(1, 60)),
-                "os_version": random.choice(["Windows 10", "Windows 11", "Windows Server 2019", "Windows Server 2022", "macOS 13", "Ubuntu 22.04"]),
-                "antivirus_status": random.choice(["Enabled", "Disabled", "Outdated"]),
-                "threats_detected": random.randint(0, 3),
-                "suspicious_processes": random.sample(processes, random.randint(0, 2)),
-                "network_connections": random.randint(5, 50),
-                "risk_score": random.randint(0, 100),
-                "patch_level": random.choice(["Current", "1-2 weeks behind", "1 month behind", "Critical updates missing"]),
-                "encryption_status": random.choice(["Enabled", "Disabled", "Partial"]),
-                "last_scan": datetime.now() - timedelta(days=random.randint(0, 7)),
-                "user_activity": random.choice(["Active", "Idle", "Offline"]),
-                "compliance_status": random.choice(["Compliant", "Non-Compliant", "At Risk"])
-            }
-            self.endpoint_telemetry.append(telemetry)
-    
-    def generate_ids_alerts(self):
-        """Generate IDS/IPS alerts"""
-        attack_types = ["Port Scan", "Brute Force", "SQL Injection", "XSS", "DDoS", "Malware Download", "Data Theft", "Zero-Day Exploit", "Credential Stuffing"]
-        
-        self.ids_alerts = []
-        
-        for i in range(150):
-            alert = {
-                "alert_id": f"IDS-{i+1:06d}",
-                "timestamp": datetime.now() - timedelta(minutes=random.randint(1, 240)),
-                "attack_type": random.choice(attack_types),
-                "source_ip": f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "dest_ip": f"10.0.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "severity": random.choice(["Low", "Medium", "High", "Critical"]),
-                "signature": f"SIG-{random.randint(1000, 9999)}",
-                "action_taken": random.choice(["Allowed", "Blocked", "Alerted", "Quarantined"]),
-                "confidence": random.randint(70, 99),
-                "protocol": random.choice(["TCP", "UDP", "HTTP", "HTTPS"]),
-                "payload_info": f"Malicious payload detected: {random.choice(['Exploit kit', 'Ransomware', 'Trojan', 'Backdoor', 'Coin Miner'])}",
-                "mitre_technique": random.choice(["T1055", "T1068", "T1071", "T1082", "T1105"])
-            }
-            self.ids_alerts.append(alert)
-    
-    def generate_honeypot_data(self):
-        """Generate honeypot interaction data"""
-        self.honeypot_data = []
-        
-        for i in range(35):
-            interaction = {
-                "honeypot_id": f"HONEY-{i+1:03d}",
-                "timestamp": datetime.now() - timedelta(hours=random.randint(1, 48)),
-                "attacker_ip": f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "attacker_country": random.choice(["China", "Russia", "USA", "Brazil", "Vietnam", "Iran", "North Korea", "India"]),
-                "attack_type": random.choice(["SSH Brute Force", "Web Exploit", "Database Attack", "Service Scan", "IoT Exploit"]),
-                "credentials_tried": random.randint(1, 50),
-                "malware_dropped": random.random() < 0.3,
-                "data_captured": random.randint(0, 5000),
-                "threat_level": random.choice(["Low", "Medium", "High", "Critical"]),
-                "campaign_id": f"CAMP-{random.randint(1000, 9999)}" if random.random() < 0.4 else None
-            }
-            self.honeypot_data.append(interaction)
-    
-    def generate_iot_devices(self):
-        """Generate IoT device security data"""
-        iot_types = ["Smart Camera", "Thermostat", "Smart Lock", "Industrial Sensor", "Medical Device", "Vehicle System"]
-        
-        self.iot_devices = []
-        
-        for i in range(25):
-            device = {
-                "device_id": f"IOT-{i+1:03d}",
-                "type": random.choice(iot_types),
-                "ip_address": f"10.1.{random.randint(1, 255)}.{random.randint(1, 255)}",
-                "firmware_version": f"v{random.randint(1, 5)}.{random.randint(0, 9)}.{random.randint(0, 9)}",
-                "last_seen": datetime.now() - timedelta(hours=random.randint(1, 24)),
-                "security_status": random.choice(["Secure", "Vulnerable", "Compromised", "Unknown"]),
-                "vulnerabilities": random.randint(0, 5),
-                "network_traffic": random.randint(10, 1000),
-                "risk_score": random.randint(0, 100)
-            }
-            self.iot_devices.append(device)
-    
-    def generate_cloud_assets(self):
-        """Generate cloud asset security data"""
-        cloud_services = ["EC2", "S3", "RDS", "Lambda", "Azure VM", "Cloud Storage", "Kubernetes", "Container Registry"]
-        
-        self.cloud_assets = []
-        
-        for i in range(20):
-            asset = {
-                "asset_id": f"CLOUD-{i+1:03d}",
-                "service": random.choice(cloud_services),
-                "provider": random.choice(["AWS", "Azure", "GCP"]),
-                "region": random.choice(["us-east-1", "eu-west-1", "ap-southeast-1", "us-west-2"]),
-                "security_status": random.choice(["Secure", "Misconfigured", "Public Exposure", "Encrypted"]),
-                "compliance": random.choice(["Compliant", "Non-Compliant", "At Risk"]),
-                "last_audit": datetime.now() - timedelta(days=random.randint(1, 30)),
-                "threats_detected": random.randint(0, 3),
-                "encryption_status": random.choice(["Enabled", "Disabled", "Partial"])
-            }
-            self.cloud_assets.append(asset)
-    
-    def simulate_live_attack(self, attack_type: str):
-        """Simulate a live cyber attack"""
-        attack_id = f"LIVE-ATTACK-{datetime.now().strftime('%H%M%S')}-{random.randint(100,999)}"
-        
-        # Create alert for this attack
-        alert = {
-            "timestamp": datetime.now(),
-            "type": "LIVE_ATTACK_SIMULATION",
-            "severity": "Critical",
-            "message": f"Live attack simulation initiated: {attack_type}",
-            "attack_id": attack_id,
-            "source": "Attack Simulator"
+        # Global Infrastructure
+        self.data_centers = {
+            "DC-US-EAST": {"location": "Virginia, USA", "capacity": "15000 servers", "uptime": 99.99},
+            "DC-US-WEST": {"location": "Oregon, USA", "capacity": "12000 servers", "uptime": 99.98},
+            "DC-EU-CENTRAL": {"location": "Frankfurt, Germany", "capacity": "10000 servers", "uptime": 99.97},
+            "DC-ASIA-PAC": {"location": "Singapore", "capacity": "8000 servers", "uptime": 99.96}
         }
-        self.alert_history.append(alert)
         
-        # Add to live threats
-        self.live_threats.append({
-            "threat_id": attack_id,
-            "type": attack_type,
-            "severity": "Critical",
-            "confidence": 95,
-            "first_detected": datetime.now(),
-            "last_activity": datetime.now(),
-            "source_country": random.choice(["China", "Russia", "North Korea", "Iran"]),
-            "target_sector": "Internal",
-            "indicators": [f"Live-{i}" for i in range(3)],
-            "status": "Active",
-            "assigned_to": "cyber_commander",
-            "kill_chain_phase": "Exploitation",
-            "impact_score": 9
-        })
+        # Business Applications
+        self.business_apps = []
+        self.generate_business_apps()
         
-        self.last_update = datetime.now()
-        return attack_id
+        # Network Infrastructure
+        self.network_devices = []
+        self.generate_network_devices()
+        
+        # Data Pipeline
+        self.data_pipelines = []
+        self.generate_data_pipelines()
+        
+        # Real-time Metrics
+        self.metrics_stream = deque(maxlen=500)
+        self.generate_metrics()
+        
+        # Incidents
+        self.incidents = {}
+        
+        # Audit Log
+        self.audit_log = deque(maxlen=1000)
+        self.log_audit("System initialized", "SYSTEM")
     
-    def deploy_countermeasures(self, attack_id: str, measures: List[str]):
-        """Deploy countermeasures against an attack"""
-        for threat in self.live_threats:
-            if threat["threat_id"] == attack_id:
-                threat["status"] = "Contained"
-                threat["last_activity"] = datetime.now()
-                
-                defense_action = {
-                    "action_id": f"DEF-{len(self.defense_actions) + 1:06d}",
-                    "timestamp": datetime.now(),
-                    "attack_id": attack_id,
-                    "measures_deployed": measures,
-                    "effectiveness": random.randint(80, 100),
-                    "status": "Completed",
-                    "response_time": random.randint(30, 300)  # seconds
-                }
-                self.defense_actions.append(defense_action)
-                
-                # Create success alert
-                alert = {
-                    "timestamp": datetime.now(),
-                    "type": "DEFENSE_ACTION",
-                    "severity": "Medium",
-                    "message": f"Countermeasures deployed against {attack_id}",
-                    "measures": measures,
-                    "source": "Defense System"
-                }
-                self.alert_history.append(alert)
-                
-                self.last_update = datetime.now()
-                return True
-        return False
+    def hash(self, password):
+        return hashlib.sha256(f"enterprise_{password}".encode()).hexdigest()
     
-    def calculate_cyber_posture(self):
-        """Calculate overall cyber security posture"""
-        critical_threats = len([t for t in self.live_threats if t.get("severity") == "Critical"])
-        high_threats = len([t for t in self.live_threats if t.get("severity") == "High"])
-        active_incidents = len([t for t in self.live_threats if t.get("status") == "Active"])
+    def log_audit(self, message, level="INFO"):
+        colors = {
+            "CRITICAL": "#ef4444",
+            "HIGH": "#f97316",
+            "MEDIUM": "#eab308",
+            "INFO": "#6366f1",
+            "SUCCESS": "#22c55e"
+        }
         
-        # Calculate based on multiple factors
-        base_score = 100
-        score = base_score - (critical_threats * 10) - (high_threats * 5) - (active_incidents * 3)
-        
-        # Adjust based on system health
-        health_penalty = (100 - self.system_health["threat_detection_rate"]) / 2
-        score -= health_penalty
-        
-        score = max(0, min(100, score))
-        
-        if score >= 85:
-            return "EXCELLENT", "#00ff00", score
-        elif score >= 70:
-            return "STRONG", "#88ff00", score
-        elif score >= 55:
-            return "MODERATE", "#ffff00", score
-        elif score >= 40:
-            return "WEAK", "#ff6600", score
-        else:
-            return "CRITICAL", "#ff0000", score
+        log_entry = f"<span style='color: {colors.get(level, '#94a3b8')}'>[{datetime.now():%H:%M:%S}]</span> <strong>[{level}]</strong> {message}"
+        self.audit_log.appendleft(log_entry)
     
-    def get_threat_radar_data(self):
-        """Generate data for threat radar visualization"""
-        threats = []
-        for _ in range(12):
-            angle = random.uniform(0, 2 * math.pi)
-            distance = random.uniform(0.2, 0.9)
-            severity = random.choice(["Low", "Medium", "High", "Critical"])
-            threats.append({
-                "angle": angle,
-                "distance": distance,
-                "severity": severity,
-                "type": random.choice(["APT", "Malware", "DDoS", "Phishing"])
+    def generate_business_apps(self):
+        """Generate business application inventory"""
+        apps = [
+            {"name": "SAP ERP", "category": "ERP", "criticality": "Critical", "users": 5400},
+            {"name": "Salesforce CRM", "category": "CRM", "criticality": "High", "users": 3200},
+            {"name": "Microsoft 365", "category": "Productivity", "criticality": "Critical", "users": 12500},
+            {"name": "Workday HCM", "category": "HR", "criticality": "High", "users": 1800},
+            {"name": "Tableau Analytics", "category": "BI", "criticality": "Medium", "users": 850},
+            {"name": "Jira Software", "category": "DevOps", "criticality": "High", "users": 2100},
+            {"name": "ServiceNow ITSM", "category": "ITSM", "criticality": "Critical", "users": 600},
+            {"name": "Confluence", "category": "Collaboration", "criticality": "Medium", "users": 4500}
+        ]
+        
+        for app in apps:
+            app.update({
+                "status": random.choice(["Operational", "Operational", "Operational", "Degraded"]),
+                "response_time_ms": random.randint(50, 500),
+                "error_rate": round(random.uniform(0, 2.5), 2),
+                "availability": round(random.uniform(99.5, 99.99), 2),
+                "last_deployment": datetime.now() - timedelta(days=random.randint(1, 90))
             })
-        return threats
+            self.business_apps.append(app)
     
-    def get_system_health_metrics(self):
-        """Get current system health metrics with slight variations"""
-        # Simulate realistic fluctuations
-        for key in self.system_health:
-            change = random.randint(-5, 5)
-            self.system_health[key] = max(0, min(100, self.system_health[key] + change))
+    def generate_network_devices(self):
+        """Generate network infrastructure"""
+        device_types = [
+            {"type": "Core Router", "count": 12},
+            {"type": "Distribution Switch", "count": 48},
+            {"type": "Access Switch", "count": 320},
+            {"type": "Firewall", "count": 24},
+            {"type": "Load Balancer", "count": 16},
+            {"type": "VPN Gateway", "count": 8}
+        ]
         
-        return self.system_health
-
-def cyber_login():
-    """Display enhanced cyber terminal login"""
-    st.markdown('<div class="main-header">🛡️ CYBER TERMINAL v3.0</div>', unsafe_allow_html=True)
-    st.markdown("### ADVANCED THREAT OPERATIONS PLATFORM", unsafe_allow_html=True)
+        for device_type in device_types:
+            for i in range(device_type["count"]):
+                device = {
+                    "device_id": f"{device_type['type'].replace(' ', '-').upper()}-{i+1:03d}",
+                    "type": device_type['type'],
+                    "location": random.choice(list(self.data_centers.keys())),
+                    "status": random.choice(["Online", "Online", "Online", "Warning"]),
+                    "cpu_usage": random.randint(10, 85),
+                    "memory_usage": random.randint(30, 90),
+                    "uptime_days": random.randint(1, 365),
+                    "throughput_gbps": round(random.uniform(0.5, 10), 2)
+                }
+                self.network_devices.append(device)
     
-    # Add hologram effect background
-    st.markdown("""
-    <div class='hologram-effect' style='border-radius: 15px; padding: 20px; margin-bottom: 20px;'>
+    def generate_data_pipelines(self):
+        """Generate data pipeline monitoring"""
+        pipelines = [
+            {"name": "Customer Data ETL", "source": "PostgreSQL", "destination": "Snowflake"},
+            {"name": "Sales Analytics", "source": "Salesforce API", "destination": "BigQuery"},
+            {"name": "Log Aggregation", "source": "CloudWatch", "destination": "Elasticsearch"},
+            {"name": "Real-time Events", "source": "Kafka", "destination": "Redshift"},
+            {"name": "Backup Sync", "source": "Production DB", "destination": "S3 Glacier"}
+        ]
+        
+        for pipeline in pipelines:
+            pipeline.update({
+                "status": random.choice(["Running", "Running", "Running", "Failed"]),
+                "records_processed": random.randint(10000, 5000000),
+                "last_run": datetime.now() - timedelta(hours=random.randint(1, 24)),
+                "avg_duration_min": random.randint(5, 120),
+                "success_rate": round(random.uniform(95, 100), 1)
+            })
+            self.data_pipelines.append(pipeline)
+    
+    def generate_metrics(self):
+        """Generate real-time system metrics"""
+        for _ in range(100):
+            metric = {
+                "timestamp": datetime.now() - timedelta(seconds=random.randint(0, 300)),
+                "cpu_cluster": round(random.uniform(30, 75), 1),
+                "memory_cluster": round(random.uniform(45, 85), 1),
+                "network_throughput_gbps": round(random.uniform(5, 25), 2),
+                "active_sessions": random.randint(8000, 15000),
+                "api_requests_per_sec": random.randint(500, 3000)
+            }
+            self.metrics_stream.append(metric)
+    
+    def create_incident(self):
+        """Create a new IT incident"""
+        incident_types = [
+            "Service Degradation",
+            "Database Performance Issue",
+            "Network Connectivity Problem",
+            "Application Error Spike",
+            "Storage Capacity Alert",
+            "Security Vulnerability Detected"
+        ]
+        
+        incident_id = f"INC-{random.randint(10000, 99999)}"
+        
+        incident = {
+            "id": incident_id,
+            "title": random.choice(incident_types),
+            "severity": random.choice(["Critical", "High", "Medium"]),
+            "status": "Open",
+            "created": datetime.now(),
+            "affected_service": random.choice([app["name"] for app in self.business_apps]),
+            "impact": f"{random.randint(100, 5000)} users affected",
+            "assigned_to": "Incident Response Team",
+            "timeline": [f"{datetime.now():%H:%M:%S} - Incident detected and logged"]
+        }
+        
+        self.incidents[incident_id] = incident
+        self.log_audit(f"New incident created: {incident_id} - {incident['title']}", "CRITICAL")
+        
+        return incident_id
+    
+    def calculate_health_score(self):
+        """Calculate overall IT infrastructure health"""
+        
+        # Application health
+        operational_apps = len([app for app in self.business_apps if app["status"] == "Operational"])
+        app_health = (operational_apps / len(self.business_apps)) * 30
+        
+        # Network health
+        online_devices = len([dev for dev in self.network_devices if dev["status"] == "Online"])
+        network_health = (online_devices / len(self.network_devices)) * 25
+        
+        # Pipeline health
+        running_pipelines = len([p for p in self.data_pipelines if p["status"] == "Running"])
+        pipeline_health = (running_pipelines / len(self.data_pipelines)) * 20
+        
+        # Incident penalty
+        open_incidents = len([inc for inc in self.incidents.values() if inc["status"] == "Open"])
+        incident_penalty = open_incidents * 5
+        
+        # Data center uptime
+        avg_uptime = sum(dc["uptime"] for dc in self.data_centers.values()) / len(self.data_centers)
+        dc_health = (avg_uptime / 100) * 25
+        
+        total_health = app_health + network_health + pipeline_health + dc_health - incident_penalty
+        total_health = max(0, min(100, total_health))
+        
+        return round(total_health, 1)
+
+# Initialize Platform
+if 'enterprise_platform' not in st.session_state:
+    st.session_state.enterprise_platform = EnterpriseITPlatform()
+    st.session_state.enterprise_auth = False
+    st.session_state.enterprise_user = None
+
+def render_enterprise_login():
+    """Enterprise Login Portal"""
+    platform = st.session_state.enterprise_platform
+    
+    st.markdown(f"""
+    <div class="enterprise-header">
+        <h1>🛡️ {platform.company}</h1>
+        <p style="font-size: 1.5rem; margin: 0.5rem 0;">Enterprise IT Command Center</p>
+        <p style="opacity: 0.8;">Infrastructure Management & Security Operations</p>
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.markdown("""
-        <div class='dashboard-panel floating-element'>
-            <h4 style='color: #00ff00;'>🚀 ENHANCED SYSTEM STATUS</h4>
-            <p style='color: #00ff00;'>🟢 Threat Intelligence: AI-ENHANCED</p>
-            <p style='color: #00ff00;'>🟢 Network Defense: QUANTUM ACTIVE</p>
-            <p style='color: #00ff00;'>🟢 Endpoint Protection: BEHAVIORAL AI</p>
-            <p style='color: #00ff00;'>🟢 Incident Response: AUTOMATED</p>
-            <p style='color: #ffff00;'>🔸 Last System Scan: 47 seconds ago</p>
-            <p style='color: #ffff00;'>🔸 Active Threats: AI Monitoring</p>
-            <p style='color: #ffff00;'>🔸 Defense Readiness: OPTIMAL</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # System metrics visualization
-        st.markdown("""
-        <div class='cyber-card'>
-            <h5>📊 SYSTEM METRICS</h5>
-            <div style='margin: 15px 0;'>
-                <div style='display: flex; justify-content: space-between; margin: 8px 0;'>
-                    <span>Threat Detection</span>
-                    <span>94%</span>
-                </div>
-                <div class='progress-cyber'>
-                    <div class='progress-cyber-bar' style='width: 94%;'></div>
-                </div>
-                
-                <div style='display: flex; justify-content: space-between; margin: 8px 0;'>
-                    <span>System Performance</span>
-                    <span>87%</span>
-                </div>
-                <div class='progress-cyber'>
-                    <div class='progress-cyber-bar' style='width: 87%;'></div>
-                </div>
-                
-                <div style='display: flex; justify-content: space-between; margin: 8px 0;'>
-                    <span>AI Readiness</span>
-                    <span>96%</span>
-                </div>
-                <div class='progress-cyber'>
-                    <div class='progress-cyber-bar' style='width: 96%;'></div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        with st.form("cyber_login"):
-            st.markdown("### 🔐 TERMINAL ACCESS", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>🔐 Executive Access Portal</h2>", unsafe_allow_html=True)
+        
+        with st.form("enterprise_login"):
+            username = st.text_input("👤 Username", placeholder="Enter your corporate username")
+            password = st.text_input("🔑 Password", type="password", placeholder="Enter your password")
             
-            username = st.text_input("👤 OPERATOR ID", placeholder="Enter your operator ID...")
-            password = st.text_input("🔒 ACCESS CODE", type="password", placeholder="Enter your access code...")
+            submit = st.form_submit_button("🚀 Access Command Center", use_container_width=True)
             
-            col_a, col_b = st.columns(2)
-            with col_a:
-                login_button = st.form_submit_button("🚀 INITIATE CYBER TERMINAL", use_container_width=True)
-            with col_b:
-                st.form_submit_button("🔄 RESET CREDENTIALS", use_container_width=True)
-            
-            if login_button:
-                if username and password:
-                    terminal = st.session_state.cyber_terminal
-                    if terminal.authenticate_user(username, password):
-                        st.session_state.user = terminal.cyber_team[username]
-                        st.session_state.logged_in = True
-                        
-                        # Success animation
-                        st.markdown("""
-                        <div style='text-align: center; padding: 20px;'>
-                            <h3 style='color: #00ff00;'>✓ ACCESS GRANTED</h3>
-                            <p style='color: #00ff00;'>Initializing enhanced cyber terminal...</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Add a progress bar for dramatic effect
-                        progress_bar = st.progress(0)
-                        for i in range(100):
-                            time.sleep(0.01)
-                            progress_bar.progress(i + 1)
-                        
-                        st.success("🎉 WELCOME TO CYBER TERMINAL v3.0")
-                        time.sleep(0.5)
-                        st.rerun()
-                    else:
-                        st.error("""
-                        ❌ ACCESS DENIED 
-                        
-                        Invalid credentials detected. 
-                        Please verify your operator ID and access code.
-                        """)
+            if submit:
+                if username in platform.it_leadership and platform.hash(password) == platform.it_leadership[username]["password"]:
+                    st.session_state.enterprise_auth = True
+                    st.session_state.enterprise_user = username
+                    platform.log_audit(f"Login successful: {platform.it_leadership[username]['name']}", "INFO")
+                    st.success("✓ Authentication Successful")
+                    time.sleep(0.5)
+                    st.rerun()
                 else:
-                    st.warning("⚠️ ENTER CREDENTIALS FOR TERMINAL ACCESS")
-    
-    st.markdown("---")
-    
-    # Enhanced authorized personnel section
-    st.markdown("### 🎯 AUTHORIZED PERSONNEL", unsafe_allow_html=True)
-    
-    cols = st.columns(4)
-    roles = [
-        {"role": "CYBER COMMANDER", "id": "cyber_commander", "code": "cyber123", "clearance": "TOP SECRET", "avatar": "👨‍💼"},
-        {"role": "THREAT HUNTER", "id": "threat_hunter", "code": "cyber123", "clearance": "SECRET", "avatar": "👩‍💻"},
-        {"role": "DEFENSE ANALYST", "id": "defense_analyst", "code": "cyber123", "clearance": "SECRET", "avatar": "👨‍🔬"},
-        {"role": "FORENSICS EXPERT", "id": "forensics_expert", "code": "cyber123", "clearance": "SECRET", "avatar": "👩‍🔍"}
-    ]
-    
-    for idx, role in enumerate(roles):
-        with cols[idx]:
-            st.markdown(f"""
-            <div class='cyber-card' style='text-align: center;'>
-                <div style='font-size: 2em;'>{role['avatar']}</div>
-                <h4>{role['role']}</h4>
-                <p><strong>ID:</strong> <code>{role['id']}</code></p>
-                <p><strong>CODE:</strong> <code>{role['code']}</code></p>
-                <p><strong>CLEARANCE:</strong> {role['clearance']}</p>
-            </div>
-            """, unsafe_allow_html=True)
+                    st.error("✗ Authentication Failed")
+        
+        st.markdown("---")
+        st.markdown("### 👥 Executive Access Credentials")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("""
+            **CTO**  
+            Username: `cto`  
+            Password: `Enterprise@2024`
+            """)
+        
+        with col2:
+            st.markdown("""
+            **IT Director**  
+            Username: `it_director`  
+            Password: `Enterprise@2024`
+            """)
+        
+        with col3:
+            st.markdown("""
+            **Security Officer**  
+            Username: `security_officer`  
+            Password: `Enterprise@2024`
+            """)
 
-def cyber_dashboard():
-    """Display enhanced main cyber terminal dashboard"""
-    terminal = st.session_state.cyber_terminal
-    user = st.session_state.user
+def render_enterprise_dashboard():
+    """Enterprise Command Center Dashboard"""
+    platform = st.session_state.enterprise_platform
+    user = platform.it_leadership[st.session_state.enterprise_user]
     
-    # Enhanced Terminal Header with user info
+    # Header
     st.markdown(f"""
-    <div style='
-        background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 100%); 
-        padding: 20px; 
-        border-bottom: 3px solid #00ff00; 
-        margin-bottom: 20px;
-        border-radius: 0 0 15px 15px;
-    '>
-        <div style='display: flex; justify-content: space-between; align-items: center;'>
-            <div>
-                <h1 style='color: #00ff00; margin: 0;'>
-                    🛡️ CYBER TERMINAL v3.0 ACTIVE
-                </h1>
-                <p style='color: #00ff00; margin: 5px 0;'>
-                    OPERATOR: {user['first_name']} {user['last_name']} {user['avatar']} | 
-                    ROLE: {user['role'].upper()} | 
-                    CLEARANCE: {user['clearance']}
-                </p>
-            </div>
-            <div style='text-align: right;'>
-                <p style='color: #00ff00; margin: 0;'>SYSTEM TIME</p>
-                <p style='color: #00ff00; margin: 0; font-size: 1.2em;'>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-            </div>
-        </div>
+    <div class="enterprise-header">
+        <h1>🛡️ {platform.company} - IT Command Center</h1>
+        <p style="margin: 0.5rem 0;">Welcome, {user['name']} | {user['title']}</p>
+        <p style="opacity: 0.8;">{datetime.now().strftime('%A, %B %d, %Y - %H:%M:%S')}</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Enhanced Quick Actions Sidebar
+    # Sidebar
     with st.sidebar:
-        st.markdown("### ⚡ QUICK ACTIONS", unsafe_allow_html=True)
-        
-        # Action buttons with icons
-        if st.button("🔄 FORCE SYSTEM REFRESH", use_container_width=True, key="refresh_main"):
-            terminal.generate_network_activity()
-            terminal.generate_live_threats()
-            terminal.last_update = datetime.now()
-            st.rerun()
-        
-        if st.button("🚨 SIMULATE ATTACK", use_container_width=True, key="sim_attack"):
-            attack_type = random.choice(["DDoS", "Ransomware", "Data Breach", "APT Intrusion", "Zero-Day Exploit"])
-            attack_id = terminal.simulate_live_attack(attack_type)
-            st.success(f"🎯 Live attack simulated: {attack_id}")
-            time.sleep(0.5)
-            st.rerun()
-        
-        if st.button("📊 GENERATE REPORT", use_container_width=True, key="gen_report"):
-            st.info("📈 Comprehensive threat report generated and saved")
-        
-        if st.button("🛡️ RUN COMPLIANCE SCAN", use_container_width=True, key="compliance_scan"):
-            st.info("🔍 Compliance scan initiated across all assets")
+        st.markdown(f"### 👤 {user['name']}")
+        st.caption(user['title'])
+        st.caption(user['department'])
         
         st.markdown("---")
-        st.markdown("### 🎮 TERMINAL MODULES", unsafe_allow_html=True)
         
-        # Enhanced module selector with icons
-        module = st.radio("SELECT MODULE", [
-            "📊 ENHANCED DASHBOARD", 
-            "🌐 QUANTUM NETWORK DEFENSE", 
-            "💻 AI ENDPOINT SECURITY", 
-            "🕵️ ADVANCED THREAT HUNTING", 
-            "🔍 DIGITAL FORENSICS LAB", 
-            "📡 GLOBAL THREAT INTELLIGENCE",
-            "🚨 AUTOMATED INCIDENT RESPONSE", 
-            "📈 PREDICTIVE ANALYTICS",
-            "☁️ CLOUD SECURITY",
-            "🔧 IOT DEFENSE"
-        ], key="module_selector")
+        module = st.radio("🎛️ Command Modules", [
+            "🏠 Executive Dashboard",
+            "💼 Business Applications",
+            "🌐 Network Infrastructure",
+            "📊 Data Operations",
+            "🚨 Incident Management",
+            "🏢 Data Centers",
+            "📈 Real-time Analytics"
+        ])
         
         st.markdown("---")
-        st.markdown("### 🔔 RECENT ALERTS", unsafe_allow_html=True)
         
-        # Show recent alerts
-        recent_alerts = terminal.alert_history[-3:] if terminal.alert_history else []
-        for alert in recent_alerts:
-            severity_color = {
-                "Critical": "#ff0000",
-                "High": "#ff6600", 
-                "Medium": "#ffff00",
-                "Low": "#00ff00"
-            }.get(alert.get("severity", "Low"), "#00ff00")
-            
-            st.markdown(f"""
-            <div style='
-                background: #1a1a1a; 
-                padding: 8px; 
-                margin: 5px 0; 
-                border-left: 3px solid {severity_color};
-                border-radius: 4px;
-                font-size: 0.8em;
-            '>
-                <strong>{alert.get('type', 'Alert')}</strong><br>
-                {alert.get('message', 'No message')}
-            </div>
-            """, unsafe_allow_html=True)
+        if st.button("🔥 SIMULATE INCIDENT", use_container_width=True):
+            inc_id = platform.create_incident()
+            st.warning(f"Incident {inc_id} created!")
+            st.rerun()
         
-        if st.button("🚪 TERMINATE SESSION", use_container_width=True, type="primary"):
-            st.session_state.logged_in = False
-            st.session_state.user = None
+        if st.button("🔄 Refresh", use_container_width=True):
+            platform.generate_metrics()
+            st.rerun()
+        
+        if st.button("🚪 Logout", use_container_width=True):
+            st.session_state.enterprise_auth = False
             st.rerun()
     
-    # Route to selected module - FIXED: All modules now have proper function mappings
-    if "ENHANCED DASHBOARD" in module:
-        show_enhanced_dashboard(terminal)
-    elif "QUANTUM NETWORK" in module:
-        show_quantum_network_defense(terminal)
-    elif "AI ENDPOINT" in module:
-        show_ai_endpoint_security(terminal)
-    elif "ADVANCED THREAT" in module:
-        show_advanced_threat_hunting(terminal)
-    elif "DIGITAL FORENSICS" in module:
-        show_digital_forensics_lab(terminal)
-    elif "GLOBAL THREAT" in module:
-        show_global_threat_intelligence(terminal)
-    elif "AUTOMATED INCIDENT" in module:
-        show_automated_incident_response(terminal)
-    elif "PREDICTIVE ANALYTICS" in module:
-        show_predictive_analytics(terminal)
-    elif "CLOUD SECURITY" in module:
-        show_cloud_security(terminal)
-    elif "IOT DEFENSE" in module:
-        show_iot_defense(terminal)
+    # Route modules
+    if "Executive Dashboard" in module:
+        render_executive_dashboard(platform)
+    elif "Business Applications" in module:
+        render_business_apps(platform)
+    elif "Network Infrastructure" in module:
+        render_network_infra(platform)
+    elif "Data Operations" in module:
+        render_data_ops(platform)
+    elif "Incident Management" in module:
+        render_incident_mgmt(platform)
+    elif "Data Centers" in module:
+        render_data_centers(platform)
+    elif "Real-time Analytics" in module:
+        render_realtime_analytics(platform)
 
-def show_enhanced_dashboard(terminal):
-    """Display enhanced cyber security dashboard"""
+def render_executive_dashboard(platform):
+    """Executive Overview Dashboard"""
     
-    # Real-time Cyber Posture Indicator
-    posture, posture_color, posture_score = terminal.calculate_cyber_posture()
+    # Health Score
+    health_score = platform.calculate_health_score()
+    
+    if health_score >= 95:
+        health_status = "EXCELLENT"
+        health_color = "#22c55e"
+    elif health_score >= 85:
+        health_status = "GOOD"
+        health_color = "#6366f1"
+    elif health_score >= 70:
+        health_status = "FAIR"
+        health_color = "#eab308"
+    else:
+        health_status = "CRITICAL"
+        health_color = "#ef4444"
+    
     st.markdown(f"""
-    <div class='neon-border' style='text-align: center; padding: 25px; margin-bottom: 25px;'>
-        <h1 style='color: {posture_color}; margin: 0; font-size: 2.5em;'>CYBER POSTURE: {posture}</h1>
-        <h2 style='color: {posture_color}; margin: 10px 0; font-size: 3em;'>{posture_score}/100</h2>
-        <div class='progress-cyber' style='margin: 0 auto; width: 60%;'>
-            <div class='progress-cyber-bar' style='width: {posture_score}%;'></div>
-        </div>
+    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 3rem; border-radius: 12px; text-align: center; border: 3px solid {health_color}; margin-bottom: 2rem;">
+        <h2 style="margin: 0; color: {health_color}; font-size: 2rem;">INFRASTRUCTURE HEALTH: {health_status}</h2>
+        <h1 style="margin: 1rem 0; font-size: 5rem; color: {health_color};">{health_score}%</h1>
+        <p style="opacity: 0.8;">Global IT Infrastructure Status</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Enhanced Key Metrics with system health
+    # Key Metrics
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        critical_threats = len([t for t in terminal.live_threats if t.get("severity") == "Critical"])
+        total_apps = len(platform.business_apps)
+        operational = len([app for app in platform.business_apps if app["status"] == "Operational"])
         st.markdown(f"""
-        <div class='metric-glowing floating-element'>
-            <h1 style='color: #ff0000; font-size: 2.5em;'>{critical_threats}</h1>
-            <p>🚨 CRITICAL THREATS</p>
-            <div class='progress-cyber'>
-                <div class='progress-cyber-bar' style='width: {min(critical_threats * 10, 100)}%; background: #ff0000;'></div>
-            </div>
+        <div class="metric-enterprise">
+            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">BUSINESS APPLICATIONS</div>
+            <div class="metric-value-enterprise">{operational}/{total_apps}</div>
+            <div style="font-size: 0.85rem; color: #64748b;">Operational</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
-        active_incidents = len([t for t in terminal.live_threats if t.get("status") == "Active"])
+        total_devices = len(platform.network_devices)
+        online = len([dev for dev in platform.network_devices if dev["status"] == "Online"])
         st.markdown(f"""
-        <div class='metric-glowing floating-element'>
-            <h1 style='color: #ff6600; font-size: 2.5em;'>{active_incidents}</h1>
-            <p>🔥 ACTIVE INCIDENTS</p>
-            <div class='progress-cyber'>
-                <div class='progress-cyber-bar' style='width: {min(active_incidents * 15, 100)}%; background: #ff6600;'></div>
-            </div>
+        <div class="metric-enterprise">
+            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">NETWORK DEVICES</div>
+            <div class="metric-value-enterprise">{online}/{total_devices}</div>
+            <div style="font-size: 0.85rem; color: #64748b;">Online</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
-        network_alerts = len([a for a in terminal.ids_alerts if a.get("severity") in ["High", "Critical"]])
+        open_incidents = len([inc for inc in platform.incidents.values() if inc["status"] == "Open"])
         st.markdown(f"""
-        <div class='metric-glowing floating-element'>
-            <h1 style='color: #ffff00; font-size: 2.5em;'>{network_alerts}</h1>
-            <p>🌐 CRITICAL ALERTS</p>
-            <div class='progress-cyber'>
-                <div class='progress-cyber-bar' style='width: {min(network_alerts * 2, 100)}%; background: #ffff00;'></div>
-            </div>
+        <div class="metric-enterprise">
+            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">ACTIVE INCIDENTS</div>
+            <div class="metric-value-enterprise" style="background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{open_incidents}</div>
+            <div style="font-size: 0.85rem; color: #64748b;">Requiring Attention</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col4:
-        endpoints_at_risk = len([e for e in terminal.endpoint_telemetry if e.get("risk_score", 0) > 70])
+        avg_dc_uptime = sum(dc["uptime"] for dc in platform.data_centers.values()) / len(platform.data_centers)
         st.markdown(f"""
-        <div class='metric-glowing floating-element'>
-            <h1 style='color: #00ff00; font-size: 2.5em;'>{endpoints_at_risk}</h1>
-            <p>💻 ENDPOINTS AT RISK</p>
-            <div class='progress-cyber'>
-                <div class='progress-cyber-bar' style='width: {min(endpoints_at_risk * 2, 100)}%; background: #00ff00;'></div>
-            </div>
+        <div class="metric-enterprise">
+            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">DATA CENTER UPTIME</div>
+            <div class="metric-value-enterprise">{avg_dc_uptime:.2f}%</div>
+            <div style="font-size: 0.85rem; color: #64748b;">Average</div>
         </div>
         """, unsafe_allow_html=True)
     
-    # System Health and Threat Feed
-    col1, col2 = st.columns(2)
+    st.markdown("---")
+    
+    # Charts and Live Feed
+    col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown("### 🏥 SYSTEM HEALTH MONITOR")
-        health_metrics = terminal.get_system_health_metrics()
+        st.markdown("### 📊 Infrastructure Performance")
         
-        for metric, value in health_metrics.items():
-            metric_name = metric.replace("_", " ").title()
-            color = "#00ff00" if value > 80 else "#ffff00" if value > 60 else "#ff6600"
-            
-            st.markdown(f"""
-            <div style='margin: 15px 0;'>
-                <div style='display: flex; justify-content: space-between;'>
-                    <span>{metric_name}</span>
-                    <span style='color: {color};'>{value}%</span>
-                </div>
-                <div class='progress-cyber'>
-                    <div class='progress-cyber-bar' style='width: {value}%; background: {color};'></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("### 🔥 LIVE THREAT FEED")
+        # Time series data
+        metrics_df = pd.DataFrame(list(platform.metrics_stream))
+        metrics_df = metrics_df.sort_values('timestamp')
         
-        # Add threat radar visualization
-        threats = terminal.get_threat_radar_data()
-        
-        # Create a simple radar visualization using plotly
         fig = go.Figure()
-        
-        for threat in threats:
-            color = {
-                "Critical": "#ff0000",
-                "High": "#ff6600", 
-                "Medium": "#ffff00",
-                "Low": "#00ff00"
-            }.get(threat["severity"], "#00ff00")
-            
-            fig.add_trace(go.Scatterpolar(
-                r=[threat["distance"]],
-                theta=[threat["angle"] * 180 / math.pi],
-                mode='markers',
-                marker=dict(
-                    size=15,
-                    color=color,
-                    line=dict(width=2, color='white')
-                ),
-                name=threat["severity"],
-                hovertemplate=f"<b>{threat['type']}</b><br>Severity: {threat['severity']}<extra></extra>"
-            ))
+        fig.add_trace(go.Scatter(
+            x=metrics_df['timestamp'],
+            y=metrics_df['cpu_cluster'],
+            name='CPU Usage %',
+            line=dict(color='#6366f1', width=2)
+        ))
+        fig.add_trace(go.Scatter(
+            x=metrics_df['timestamp'],
+            y=metrics_df['memory_cluster'],
+            name='Memory Usage %',
+            line=dict(color='#8b5cf6', width=2)
+        ))
         
         fig.update_layout(
-            polar=dict(
-                radialaxis=dict(visible=True, range=[0, 1]),
-                angularaxis=dict(visible=True)
-            ),
-            showlegend=False,
-            height=300,
-            margin=dict(l=20, r=20, t=30, b=20),
             paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font_color='#00ff00'
+            plot_bgcolor='rgba(15,23,42,0.8)',
+            font_color='#e0e7ff',
+            height=350,
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
         
         st.plotly_chart(fig, use_container_width=True)
     
-    # Real-time Activity Streams
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 🌐 LIVE NETWORK ACTIVITY")
+    with col2:
+        st.markdown("### 📡 Live Audit Log")
         
-        if terminal.network_activity:
-            recent_activity = sorted(terminal.network_activity, 
-                                   key=lambda x: x.get("timestamp", datetime.now()), 
-                                   reverse=True)[:10]
+        log_html = '<div class="live-feed">'
+        for log in list(platform.audit_log)[:25]:
+            log_html += f'<div style="margin: 0.3rem 0; font-size: 0.85rem;">{log}</div>'
+        log_html += '</div>'
+        
+        st.markdown(log_html, unsafe_allow_html=True)
+
+def render_business_apps(platform):
+    """Business Applications Dashboard"""
+    st.markdown("### 💼 Business-Critical Applications")
+    
+    for app in platform.business_apps:
+        criticality_badge = f"badge-{app['criticality'].lower()}"
+        status_badge = "badge-operational" if app["status"] == "Operational" else "badge-critical"
+        
+        with st.expander(f"**{app['name']}** ({app['category']}) - {app['users']} Users"):
+            col1, col2, col3 = st.columns(3)
             
-            for activity in recent_activity:
-                flagged = activity.get("flagged", False)
-                flag_icon = "🚩" if flagged else "  "
-                
-                threat_score = activity.get("threat_score", 0)
-                threat_color = "#ff0000" if threat_score > 80 else "#ffff00" if threat_score > 60 else "#00ff00"
-                
-                timestamp = activity.get("timestamp", datetime.now())
-                source_ip = activity.get("source_ip", "0.0.0.0")
-                dest_ip = activity.get("dest_ip", "0.0.0.0")
-                protocol = activity.get("protocol", "UNKNOWN")
-                
-                st.markdown(f"""
-                <div class='log-entry'>
-                    <span style='color: #00ff00;'>[{timestamp.strftime('%H:%M:%S')}]</span>
-                    {flag_icon} {source_ip} → {dest_ip}
-                    <span style='color: #ffff00;'>{protocol}</span>
-                    <span style='color: {threat_color}; float: right;'>Threat: {threat_score}%</span>
+            with col1:
+                st.markdown(f"**Status:** <span class='badge-enterprise {status_badge}'>{app['status']}</span>", unsafe_allow_html=True)
+                st.markdown(f"**Criticality:** <span class='badge-enterprise {criticality_badge}'>{app['criticality']}</span>", unsafe_allow_html=True)
+                st.write(f"**Active Users:** {app['users']}")
+            
+            with col2:
+                st.write(f"**Response Time:** {app['response_time_ms']} ms")
+                st.write(f"**Error Rate:** {app['error_rate']}%")
+                st.write(f"**Availability:** {app['availability']}%")
+            
+            with col3:
+                st.write(f"**Last Deployment:** {app['last_deployment'].strftime('%Y-%m-%d')}")
+                if st.button(f"📊 View Metrics", key=f"metrics_{app['name']}"):
+                    st.info("Detailed metrics loading...")
+
+def render_network_infra(platform):
+    """Network Infrastructure Dashboard"""
+    st.markdown("### 🌐 Global Network Infrastructure")
+    
+    # Filter
+    filter_type = st.selectbox("Device Type", ["All"] + list(set(dev["type"] for dev in platform.network_devices)))
+    
+    devices = platform.network_devices
+    if filter_type != "All":
+        devices = [dev for dev in devices if dev["type"] == filter_type]
+    
+    st.markdown(f"**Showing {len(devices)} devices**")
+    
+    # Device grid
+    for device in devices[:20]:
+        status_badge = "badge-operational" if device["status"] == "Online" else "badge-high"
+        
+        st.markdown(f"""
+        <div class="infrastructure-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="font-size: 1.1rem;">{device['device_id']}</strong><br>
+                    <span style="color: #94a3b8;">{device['type']} | {device['location']}</span>
                 </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("No network activity data available")
-    
-    with col2:
-        st.markdown("### ⚡ SECURITY EVENTS")
-        
-        # Combine various event types
-        all_events = []
-        
-        # Add IDS alerts
-        for alert in terminal.ids_alerts[-5:]:
-            all_events.append({
-                "timestamp": alert.get("timestamp", datetime.now()),
-                "type": "IDS Alert",
-                "message": f"{alert.get('attack_type', 'Unknown')} from {alert.get('source_ip', 'Unknown')}",
-                "severity": alert.get("severity", "Low")
-            })
-        
-        # Add defense actions
-        for action in terminal.defense_actions[-3:]:
-            all_events.append({
-                "timestamp": action.get("timestamp", datetime.now()),
-                "type": "Defense Action",
-                "message": f"Countermeasures deployed: {', '.join(action.get('measures_deployed', []))}",
-                "severity": "Medium"
-            })
-        
-        # Sort by timestamp
-        all_events.sort(key=lambda x: x.get("timestamp", datetime.now()), reverse=True)
-        
-        for event in all_events[:8]:
-            severity = event.get("severity", "Low")
-            severity_color = {
-                "Critical": "#ff0000",
-                "High": "#ff6600", 
-                "Medium": "#ffff00",
-                "Low": "#00ff00"
-            }.get(severity, "#00ff00")
-            
-            timestamp = event.get("timestamp", datetime.now())
-            
-            st.markdown(f"""
-            <div class='log-entry'>
-                <span style='color: {severity_color};'>[{timestamp.strftime('%H:%M:%S')}]</span>
-                <strong>{event['type']}</strong>: {event['message']}
+                <div>
+                    <span class='badge-enterprise {status_badge}'>{device['status']}</span>
+                </div>
             </div>
-            """, unsafe_allow_html=True)
-
-# MISSING FUNCTION IMPLEMENTATIONS - ADDED BELOW
-
-def show_quantum_network_defense(terminal):
-    """Display quantum network defense module"""
-    st.markdown("## 🌐 QUANTUM NETWORK DEFENSE")
-    st.markdown("### AI-Powered Network Protection System")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### 🛡️ QUANTUM FIREWALL STATUS")
-        
-        firewall_stats = {
-            "Total Rules": 1247,
-            "Active Rules": 892,
-            "Blocks Today": 2341,
-            "Threats Prevented": 167
-        }
-        
-        for stat, value in firewall_stats.items():
-            st.markdown(f"""
-            <div class='cyber-card' style='text-align: center;'>
-                <h3 style='color: #00ff00; margin: 0;'>{value}</h3>
-                <p style='margin: 0;'>{stat}</p>
+            <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                <div>
+                    <div style="color: #94a3b8; font-size: 0.8rem;">CPU</div>
+                    <div style="font-size: 1.2rem; font-weight: 600;">{device['cpu_usage']}%</div>
+                </div>
+                <div>
+                    <div style="color: #94a3b8; font-size: 0.8rem;">Memory</div>
+                    <div style="font-size: 1.2rem; font-weight: 600;">{device['memory_usage']}%</div>
+                </div>
+                <div>
+                    <div style="color: #94a3b8; font-size: 0.8rem;">Uptime</div>
+                    <div style="font-size: 1.2rem; font-weight: 600;">{device['uptime_days']}d</div>
+                </div>
+                <div>
+                    <div style="color: #94a3b8; font-size: 0.8rem;">Throughput</div>
+                    <div style="font-size: 1.2rem; font-weight: 600;">{device['throughput_gbps']} Gbps</div>
+                </div>
             </div>
-            """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("#### 📊 NETWORK TRAFFIC ANALYSIS")
-        
-        # Create network traffic visualization
-        protocols = {}
-        for activity in terminal.network_activity[:200]:
-            protocol = activity.get("protocol", "UNKNOWN")
-            protocols[protocol] = protocols.get(protocol, 0) + 1
-        
-        if protocols:
-            fig = px.pie(values=list(protocols.values()), names=list(protocols.keys()), 
-                        title="Protocol Distribution")
-            fig.update_layout(
-                paper_bgcolor='#1a1a1a',
-                plot_bgcolor='#1a1a1a',
-                font_color='#00ff00',
-                showlegend=True
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-def show_ai_endpoint_security(terminal):
-    """Display AI endpoint security module"""
-    st.markdown("## 💻 AI ENDPOINT SECURITY")
-    st.markdown("### Behavioral Analysis & Machine Learning Protection")
-    
-    # Endpoint risk analysis
-    high_risk = len([e for e in terminal.endpoint_telemetry if e.get("risk_score", 0) > 70])
-    medium_risk = len([e for e in terminal.endpoint_telemetry if 40 <= e.get("risk_score", 0) <= 70])
-    low_risk = len([e for e in terminal.endpoint_telemetry if e.get("risk_score", 0) < 40])
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.markdown(f"""
-        <div class='threat-panel' style='text-align: center;'>
-            <h1 style='color: #ff0000;'>{high_risk}</h1>
-            <p>HIGH RISK ENDPOINTS</p>
         </div>
         """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-        <div class='defense-panel' style='text-align: center;'>
-            <h1 style='color: #ffff00;'>{medium_risk}</h1>
-            <p>MEDIUM RISK ENDPOINTS</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-        <div class='dashboard-panel' style='text-align: center;'>
-            <h1 style='color: #00ff00;'>{low_risk}</h1>
-            <p>LOW RISK ENDPOINTS</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Endpoint details
-    st.markdown("#### 🔍 ENDPOINT DETAILS")
-    if st.checkbox("Show High Risk Endpoints"):
-        high_risk_endpoints = [e for e in terminal.endpoint_telemetry if e.get("risk_score", 0) > 70]
-        for endpoint in high_risk_endpoints[:5]:
-            with st.expander(f"🚨 {endpoint['endpoint_id']} - Risk: {endpoint['risk_score']}"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**OS:** {endpoint.get('os_version', 'Unknown')}")
-                    st.write(f"**AV Status:** {endpoint.get('antivirus_status', 'Unknown')}")
-                    st.write(f"**Threats:** {endpoint.get('threats_detected', 0)}")
-                with col2:
-                    st.write(f"**Patch Level:** {endpoint.get('patch_level', 'Unknown')}")
-                    st.write(f"**Last Scan:** {endpoint.get('last_scan', 'Never')}")
 
-def show_advanced_threat_hunting(terminal):
-    """Display advanced threat hunting module"""
-    st.markdown("## 🕵️ ADVANCED THREAT HUNTING")
-    st.markdown("### Proactive Threat Detection & Analysis")
+def render_data_ops(platform):
+    """Data Operations Dashboard"""
+    st.markdown("### 📊 Data Pipeline Operations")
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### 🎯 HUNTING QUERIES")
+    for pipeline in platform.data_pipelines:
+        status_badge = "badge-operational" if pipeline["status"] == "Running" else "badge-critical"
         
-        queries = [
-            "Processes with network connections to known malicious IPs",
-            "Suspicious PowerShell execution patterns", 
-            "Unusual scheduled task creations",
-            "Registry modifications by unknown processes",
-            "Lateral movement attempts using WMI"
-        ]
-        
-        for i, query in enumerate(queries):
-            st.markdown(f"""
-            <div class='cyber-card'>
-                <strong>Query #{i+1}:</strong> {query}
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(f"Run Query #{i+1}", key=f"query_{i}"):
-                st.success(f"Query executed: Found {random.randint(0, 5)} suspicious activities")
-    
-    with col2:
-        st.markdown("#### 📊 HUNTING RESULTS")
-        
-        results = [
-            {"type": "Suspicious Process", "endpoint": "WS-023", "confidence": 85, "timestamp": "2 hours ago"},
-            {"type": "Network Anomaly", "endpoint": "SRV-005", "confidence": 92, "timestamp": "1 hour ago"},
-            {"type": "Fileless Attack", "endpoint": "WS-042", "confidence": 78, "timestamp": "3 hours ago"}
-        ]
-        
-        for result in results:
-            confidence = result["confidence"]
-            color = "#00ff00" if confidence > 90 else "#ffff00" if confidence > 75 else "#ff6600"
-            
-            st.markdown(f"""
-            <div class='threat-panel'>
-                <strong>{result['type']}</strong><br>
-                Endpoint: {result['endpoint']} | 
-                Confidence: <span style='color: {color};'>{confidence}%</span> |
-                {result['timestamp']}
-            </div>
-            """, unsafe_allow_html=True)
-
-def show_digital_forensics_lab(terminal):
-    """Display digital forensics lab module"""
-    st.markdown("## 🔍 DIGITAL FORENSICS LAB")
-    st.markdown("### Advanced Forensic Analysis & Investigation")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### 🧩 FORENSIC ARTIFACTS")
-        
-        artifacts = [
-            {"type": "Memory Dump", "size": "4.2 GB", "status": "Analyzed", "findings": 3},
-            {"type": "Disk Image", "size": "128 GB", "status": "In Progress", "findings": 12},
-            {"type": "Network Capture", "size": "2.1 GB", "status": "Analyzed", "findings": 8},
-            {"type": "Log Files", "size": "856 MB", "status": "Pending", "findings": 0}
-        ]
-        
-        for artifact in artifacts:
-            status_color = "#00ff00" if artifact["status"] == "Analyzed" else "#ffff00" if artifact["status"] == "In Progress" else "#ff6600"
-            
-            st.markdown(f"""
-            <div class='cyber-card'>
-                <strong>{artifact['type']}</strong><br>
-                Size: {artifact['size']} | 
-                Status: <span style='color: {status_color};'>{artifact['status']}</span> |
-                Findings: {artifact['findings']}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("#### 🔬 MALWARE ANALYSIS")
-        
-        malware_samples = [
-            {"name": "Trojan.Emotet", "risk": "High", "analysis": "Behavioral analysis completed"},
-            {"name": "Ransomware.Ryuk", "risk": "Critical", "analysis": "Reverse engineering in progress"},
-            {"name": "Backdoor.DarkComet", "risk": "High", "analysis": "Network analysis completed"}
-        ]
-        
-        for malware in malware_samples:
-            risk_color = "#ff0000" if malware["risk"] == "Critical" else "#ff6600"
-            
-            st.markdown(f"""
-            <div class='threat-panel'>
-                <strong>{malware['name']}</strong><br>
-                Risk: <span style='color: {risk_color};'>{malware['risk']}</span><br>
-                {malware['analysis']}
-            </div>
-            """, unsafe_allow_html=True)
-
-def show_global_threat_intelligence(terminal):
-    """Display global threat intelligence module"""
-    st.markdown("## 📡 GLOBAL THREAT INTELLIGENCE")
-    st.markdown("### Real-time Global Threat Monitoring")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### 🌍 ADVANCED PERSISTENT THREATS")
-        
-        for apt in terminal.threat_intel_db["advanced_persistent_threats"]:
-            risk_color = "#ff0000" if apt["risk_level"] == "Critical" else "#ff6600"
-            
-            st.markdown(f"""
-            <div class='threat-panel'>
-                <strong>{apt['name']}</strong> | <span style='color: {risk_color};'>{apt['risk_level']}</span><br>
-                Country: {apt['country']} | Targets: {', '.join(apt['targets'])}<br>
-                Tactics: {', '.join(apt['tactics'])}
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("#### 🦠 MALWARE FAMILIES")
-        
-        for malware in terminal.threat_intel_db["malware_families"]:
-            detection_color = "#00ff00" if malware["detection_rate"] > 90 else "#ffff00"
-            
-            st.markdown(f"""
-            <div class='cyber-card'>
-                <strong>{malware['name']}</strong> | Type: {malware['type']}<br>
-                Function: {malware['primary_function']} | Propagation: {malware['propagation']}<br>
-                Detection: <span style='color: {detection_color};'>{malware['detection_rate']}%</span>
-            </div>
-            """, unsafe_allow_html=True)
-
-def show_automated_incident_response(terminal):
-    """Display automated incident response module"""
-    st.markdown("## 🚨 AUTOMATED INCIDENT RESPONSE")
-    st.markdown("### AI-Driven Incident Management")
-    
-    active_incidents = [t for t in terminal.live_threats if t.get("status") == "Active"]
-    
-    st.markdown(f"#### 🔥 ACTIVE INCIDENTS: {len(active_incidents)}")
-    
-    if not active_incidents:
-        st.success("🎉 No active incidents requiring immediate attention")
-        return
-    
-    for incident in active_incidents:
-        severity = incident.get("severity", "Low")
-        severity_color = "#ff0000" if severity == "Critical" else "#ff6600" if severity == "High" else "#ffff00"
-        
-        with st.expander(f"🚨 {incident['threat_id']} - {incident['type']} - Severity: {severity}"):
+        with st.expander(f"**{pipeline['name']}** - {pipeline['source']} → {pipeline['destination']}"):
             col1, col2 = st.columns(2)
             
             with col1:
-                st.write(f"**First Detected:** {incident.get('first_detected', 'Unknown')}")
-                st.write(f"**Source Country:** {incident.get('source_country', 'Unknown')}")
-                st.write(f"**Confidence:** {incident.get('confidence', 0)}%")
+                st.markdown(f"**Status:** <span class='badge-enterprise {status_badge}'>{pipeline['status']}</span>", unsafe_allow_html=True)
+                st.write(f"**Records Processed:** {pipeline['records_processed']:,}")
+                st.write(f"**Success Rate:** {pipeline['success_rate']}%")
             
             with col2:
-                st.write(f"**Assigned To:** {incident.get('assigned_to', 'Unassigned')}")
-                st.write(f"**Kill Chain:** {incident.get('kill_chain_phase', 'Unknown')}")
-                st.write(f"**Impact Score:** {incident.get('impact_score', 0)}/10")
-            
-            # Response actions
-            col3, col4, col5 = st.columns(3)
-            with col3:
-                if st.button("🛑 CONTAIN", key=f"contain_{incident['threat_id']}"):
-                    measures = ["Network Isolation", "Endpoint Quarantine"]
-                    if terminal.deploy_countermeasures(incident['threat_id'], measures):
-                        st.success("✓ Threat contained successfully!")
-            with col4:
-                if st.button("🔍 INVESTIGATE", key=f"investigate_{incident['threat_id']}"):
-                    st.info("🔍 Deep investigation initiated...")
-            with col5:
-                if st.button("📋 ESCALATE", key=f"escalate_{incident['threat_id']}"):
-                    st.warning("⚠️ Incident escalated to Cyber Commander")
+                st.write(f"**Last Run:** {pipeline['last_run'].strftime('%Y-%m-%d %H:%M')}")
+                st.write(f"**Avg Duration:** {pipeline['avg_duration_min']} minutes")
+                if st.button(f"▶️ Trigger Run", key=f"run_{pipeline['name']}"):
+                    st.success("Pipeline execution started")
 
-def show_predictive_analytics(terminal):
-    """Display predictive analytics module"""
-    st.markdown("## 📈 PREDICTIVE ANALYTICS")
-    st.markdown("### AI-Powered Threat Prediction")
+def render_incident_mgmt(platform):
+    """Incident Management Dashboard"""
+    st.markdown("### 🚨 IT Incident Management")
     
+    if not platform.incidents:
+        st.success("✓ No active incidents - All systems operational")
+        return
+    
+    for inc_id, incident in platform.incidents.items():
+        severity_badge = f"badge-{incident['severity'].lower()}"
+        
+        with st.expander(f"**{inc_id}** - {incident['title']} [{incident['severity']}]"):
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                st.markdown(f"**Severity:** <span class='badge-enterprise {severity_badge}'>{incident['severity']}</span>", unsafe_allow_html=True)
+                st.write(f"**Status:** {incident['status']}")
+                st.write(f"**Affected Service:** {incident['affected_service']}")
+                st.write(f"**Impact:** {incident['impact']}")
+                st.write(f"**Created:** {incident['created'].strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            with col2:
+                if incident['status'] == 'Open':
+                    if st.button("🔍 Investigate", key=f"inv_{inc_id}"):
+                        platform.incidents[inc_id]['status'] = 'Investigating'
+                        platform.log_audit(f"Investigation started: {inc_id}", "INFO")
+                        st.rerun()
+                elif incident['status'] == 'Investigating':
+                    if st.button("✓ Resolve", key=f"res_{inc_id}"):
+                        platform.incidents[inc_id]['status'] = 'Resolved'
+                        platform.log_audit(f"Incident resolved: {inc_id}", "SUCCESS")
+                        st.rerun()
+
+def render_data_centers(platform):
+    """Data Centers Dashboard"""
+    st.markdown("### 🏢 Global Data Center Operations")
+    
+    for dc_id, dc in platform.data_centers.items():
+        uptime_color = "#22c55e" if dc["uptime"] >= 99.95 else "#eab308"
+        
+        st.markdown(f"""
+        <div class="infrastructure-card">
+            <h3 style="margin: 0; color: #818cf8;">{dc_id}</h3>
+            <p style="color: #94a3b8; margin: 0.5rem 0;">{dc['location']}</p>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+                <div>
+                    <div style="color: #94a3b8; font-size: 0.85rem;">Capacity</div>
+                    <div style="font-size: 1.5rem; font-weight: 600;">{dc['capacity']}</div>
+                </div>
+                <div>
+                    <div style="color: #94a3b8; font-size: 0.85rem;">Uptime</div>
+                    <div style="font-size: 1.5rem; font-weight: 600; color: {uptime_color};">{dc['uptime']}%</div>
+                </div>
+                <div>
+                    <div style="color: #94a3b8; font-size: 0.85rem;">Status</div>
+                    <div><span class='badge-enterprise badge-operational'>OPERATIONAL</span></div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_realtime_analytics(platform):
+    """Real-time Analytics Dashboard"""
+    st.markdown("### 📈 Real-time System Analytics")
+    
+    # Generate fresh metrics
+    platform.generate_metrics()
+    
+    metrics_df = pd.DataFrame(list(platform.metrics_stream))
+    metrics_df = metrics_df.sort_values('timestamp')
+    
+    # Multiple charts
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("#### 📊 THREAT TRENDS")
-        
-        # Generate sample trend data
-        dates = pd.date_range(start='2024-01-01', periods=30, freq='D')
-        threats = [random.randint(5, 25) for _ in range(30)]
-        
-        fig = px.line(x=dates, y=threats, title="Daily Threat Detection (Last 30 Days)")
-        fig.update_layout(
-            paper_bgcolor='#1a1a1a',
-            plot_bgcolor='#1a1a1a',
-            font_color='#00ff00',
-            xaxis_title="Date",
-            yaxis_title="Threats Detected"
-        )
+        st.markdown("#### System Resource Utilization")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=metrics_df['timestamp'], y=metrics_df['cpu_cluster'], name='CPU %', fill='tozeroy'))
+        fig.add_trace(go.Scatter(x=metrics_df['timestamp'], y=metrics_df['memory_cluster'], name='Memory %', fill='tozeroy'))
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,23,42,0.8)', font_color='#e0e7ff', height=300)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown("#### 🎯 ATTACK PREDICTION")
-        
-        predictions = [
-            {"type": "Phishing Campaign", "probability": 85, "timeframe": "Next 48 hours"},
-            {"type": "Ransomware Attack", "probability": 67, "timeframe": "Next 7 days"},
-            {"type": "DDoS Attack", "probability": 42, "timeframe": "Next 24 hours"}
-        ]
-        
-        for pred in predictions:
-            prob_color = "#ff0000" if pred["probability"] > 80 else "#ff6600" if pred["probability"] > 60 else "#ffff00"
-            
-            st.markdown(f"""
-            <div class='cyber-card'>
-                <strong>{pred['type']}</strong><br>
-                Probability: <span style='color: {prob_color};'>{pred['probability']}%</span><br>
-                Timeframe: {pred['timeframe']}
-            </div>
-            """, unsafe_allow_html=True)
-
-def show_cloud_security(terminal):
-    """Display cloud security module"""
-    st.markdown("## ☁️ CLOUD SECURITY")
-    st.markdown("### Multi-Cloud Security Management")
-    
-    # Cloud asset overview
-    st.markdown("#### 📊 CLOUD ASSET OVERVIEW")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        aws_assets = len([a for a in terminal.cloud_assets if a.get("provider") == "AWS"])
-        st.markdown(f"""
-        <div class='dashboard-panel' style='text-align: center;'>
-            <h3 style='color: #ff9900;'>{aws_assets}</h3>
-            <p>AWS Assets</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        azure_assets = len([a for a in terminal.cloud_assets if a.get("provider") == "Azure"])
-        st.markdown(f"""
-        <div class='dashboard-panel' style='text-align: center;'>
-            <h3 style='color: #0078d4;'>{azure_assets}</h3>
-            <p>Azure Assets</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        gcp_assets = len([a for a in terminal.cloud_assets if a.get("provider") == "GCP"])
-        st.markdown(f"""
-        <div class='dashboard-panel' style='text-align: center;'>
-            <h3 style='color: #4285f4;'>{gcp_assets}</h3>
-            <p>GCP Assets</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Cloud security issues
-    st.markdown("#### 🚨 CLOUD SECURITY ISSUES")
-    
-    misconfigured = [a for a in terminal.cloud_assets if a.get("security_status") == "Misconfigured"]
-    for asset in misconfigured[:3]:
-        st.markdown(f"""
-        <div class='threat-panel'>
-            <strong>{asset['asset_id']}</strong> - {asset['service']} ({asset['provider']})<br>
-            Issue: Misconfiguration detected in {asset['region']}<br>
-            Compliance: {asset.get('compliance', 'Unknown')}
-        </div>
-        """, unsafe_allow_html=True)
-
-def show_iot_defense(terminal):
-    """Display IoT defense module"""
-    st.markdown("## 🔧 IOT DEFENSE")
-    st.markdown("### IoT Device Security & Monitoring")
-    
-    # IoT device overview
-    st.markdown("#### 📱 IOT DEVICE OVERVIEW")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        vulnerable = len([d for d in terminal.iot_devices if d.get("security_status") == "Vulnerable"])
-        st.markdown(f"""
-        <div class='threat-panel' style='text-align: center;'>
-            <h3 style='color: #ff0000;'>{vulnerable}</h3>
-            <p>Vulnerable Devices</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        compromised = len([d for d in terminal.iot_devices if d.get("security_status") == "Compromised"])
-        st.markdown(f"""
-        <div class='threat-panel' style='text-align: center;'>
-            <h3 style='color: #ff6600;'>{compromised}</h3>
-            <p>Compromised Devices</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        secure = len([d for d in terminal.iot_devices if d.get("security_status") == "Secure"])
-        st.markdown(f"""
-        <div class='defense-panel' style='text-align: center;'>
-            <h3 style='color: #00ff00;'>{secure}</h3>
-            <p>Secure Devices</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # High risk IoT devices
-    st.markdown("#### 🔍 HIGH RISK IOT DEVICES")
-    
-    high_risk_iot = [d for d in terminal.iot_devices if d.get("risk_score", 0) > 70]
-    for device in high_risk_iot[:5]:
-        st.markdown(f"""
-        <div class='cyber-card'>
-            <strong>{device['device_id']}</strong> - {device['type']}<br>
-            IP: {device['ip_address']} | Risk Score: {device['risk_score']}<br>
-            Firmware: {device['firmware_version']} | Vulnerabilities: {device['vulnerabilities']}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("#### Active Sessions & API Traffic")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=metrics_df['timestamp'], y=metrics_df['active_sessions'], name='Sessions'))
+        fig.add_trace(go.Scatter(x=metrics_df['timestamp'], y=metrics_df['api_requests_per_sec'], name='API Req/s'))
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,23,42,0.8)', font_color='#e0e7ff', height=300)
+        st.plotly_chart(fig, use_container_width=True)
 
 def main():
-    # Initialize cyber terminal in session state
-    if 'cyber_terminal' not in st.session_state:
-        st.session_state.cyber_terminal = AdvancedCyberTerminal()
-    
-    # Initialize login state
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
-    
-    if 'user' not in st.session_state:
-        st.session_state.user = None
-    
-    # Check if user is logged in
-    if not st.session_state.logged_in:
-        cyber_login()
+    if not st.session_state.enterprise_auth:
+        render_enterprise_login()
     else:
-        cyber_dashboard()
+        render_enterprise_dashboard()
 
 if __name__ == "__main__":
     main()
