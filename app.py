@@ -199,7 +199,7 @@ st.markdown("""
         0%, 50% { opacity: 1; }
         51%, 100% { opacity: 0; }
     }
-    .stButton button {
+    .stButton > button {
         background: linear-gradient(135deg, #00ff00 0%, #008800 100%);
         color: black;
         border: none;
@@ -216,10 +216,35 @@ st.markdown("""
         transition: all 0.3s ease;
         width: 100%;
     }
-    .stButton button:hover {
+    .stButton > button:hover {
         background: linear-gradient(135deg, #44ff44 0%, #00aa00 100%);
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(0, 255, 0, 0.4);
+    }
+    .stRadio > div {
+        background-color: #1a1a1a;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #00ff00;
+    }
+    .stRadio > div > label {
+        color: #00ff00 !important;
+        font-family: 'Courier New', monospace;
+    }
+    .stSelectbox > div > div {
+        background-color: #1a1a1a;
+        color: #00ff00;
+        border: 1px solid #00ff00;
+    }
+    .stTextInput > div > div > input {
+        background-color: #1a1a1a;
+        color: #00ff00;
+        border: 1px solid #00ff00;
+        font-family: 'Courier New', monospace;
+    }
+    .stExpander > div {
+        background-color: #1a1a1a;
+        border: 1px solid #00ff00;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -776,6 +801,16 @@ def create_threat_radar(terminal):
         <div class="sweep-line"></div>
     """
     
+    # Add concentric circles for radar range
+    for i in range(1, 4):
+        radius = i * 25
+        radar_html += f"""
+        <div style="position: absolute; width: {radius}%; height: {radius}%; 
+                    border: 1px solid rgba(0, 255, 0, 0.3); border-radius: 50%; 
+                    top: {(100 - radius) / 2}%; left: {(100 - radius) / 2}%;">
+        </div>
+        """
+    
     # Add threat dots
     for threat in threats:
         # Convert polar coordinates to Cartesian for CSS positioning
@@ -783,8 +818,8 @@ def create_threat_radar(terminal):
         distance = threat["distance"]
         
         # Convert to percentage coordinates (center is 50%, 50%)
-        x = 50 + (distance * 40 * math.cos(angle))
-        y = 50 + (distance * 40 * math.sin(angle))
+        x = 50 + (distance * 45 * math.cos(angle))
+        y = 50 + (distance * 45 * math.sin(angle))
         
         # Set color based on severity
         color = {
@@ -801,16 +836,6 @@ def create_threat_radar(terminal):
         </div>
         """
     
-    # Add concentric circles for radar range
-    for i in range(1, 4):
-        radius = i * 20
-        radar_html += f"""
-        <div style="position: absolute; width: {radius}%; height: {radius}%; 
-                    border: 1px solid rgba(0, 255, 0, 0.3); border-radius: 50%; 
-                    top: {(100 - radius) / 2}%; left: {(100 - radius) / 2}%;">
-        </div>
-        """
-    
     radar_html += "</div>"
     
     return radar_html
@@ -822,7 +847,7 @@ def auto_refresh():
     
     # Simple auto-refresh by checking time difference
     current_time = datetime.now()
-    if (current_time - st.session_state.last_refresh).total_seconds() > 5:  # Refresh every 5 seconds
+    if (current_time - st.session_state.last_refresh).total_seconds() > 3:  # Refresh every 3 seconds
         st.session_state.last_refresh = current_time
         st.rerun()
 
@@ -1044,7 +1069,8 @@ def show_cyber_dashboard(terminal):
     
     with col1:
         st.markdown("### 🎯 LIVE THREAT RADAR")
-        st.markdown(f"**Active Threats Detected: {len([t for t in terminal.live_threats if t['status'] == 'Active'])}**")
+        active_threats_count = len([t for t in terminal.live_threats if t["status"] == "Active"])
+        st.markdown(f"**Active Threats Detected: {active_threats_count}**")
         
         # Display the threat radar
         radar_html = create_threat_radar(terminal)
@@ -1052,7 +1078,7 @@ def show_cyber_dashboard(terminal):
         
         # Radar legend
         st.markdown("""
-        <div style='display: flex; justify-content: space-around; margin-top: 10px;'>
+        <div style='display: flex; justify-content: space-around; margin-top: 10px; font-size: 0.8em;'>
             <div><span style='color: #ff0000;'>●</span> Critical</div>
             <div><span style='color: #ff6600;'>●</span> High</div>
             <div><span style='color: #ffff00;'>●</span> Medium</div>
@@ -1150,7 +1176,8 @@ def show_network_defense(terminal):
             fig.update_layout(
                 paper_bgcolor='#1a1a1a',
                 plot_bgcolor='#1a1a1a',
-                font_color='#00ff00'
+                font_color='#00ff00',
+                showlegend=True
             )
             st.plotly_chart(fig, use_container_width=True)
     
@@ -1242,9 +1269,12 @@ def show_endpoint_security(terminal):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        endpoint_to_quarantine = st.selectbox("Select Endpoint", [e["endpoint_id"] for e in high_risk_endpoints])
-        if st.button("🔄 QUARANTINE ENDPOINT"):
-            st.success(f"Endpoint {endpoint_to_quarantine} quarantined for investigation")
+        if high_risk_endpoints:
+            endpoint_to_quarantine = st.selectbox("Select Endpoint", [e["endpoint_id"] for e in high_risk_endpoints])
+            if st.button("🔄 QUARANTINE ENDPOINT"):
+                st.success(f"Endpoint {endpoint_to_quarantine} quarantined for investigation")
+        else:
+            st.info("No high-risk endpoints available")
     
     with col2:
         if st.button("🔍 INITIATE DEEP SCAN", use_container_width=True):
