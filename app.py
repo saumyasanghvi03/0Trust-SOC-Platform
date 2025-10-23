@@ -7,785 +7,1242 @@ from datetime import datetime, timedelta
 import hashlib
 import random
 import time
-from collections import deque
+from collections import deque, defaultdict
 import warnings
+import networkx as nx
+from typing import Dict, List, Tuple
 
 warnings.filterwarnings('ignore')
 
 st.set_page_config(
-    page_title="Aegis Enterprise IT Command",
-    page_icon="🛡️",
+    page_title="Cyber Warfare Simulation Platform",
+    page_icon="⚔️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Advanced Enterprise Styling
+# Advanced Styling
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
     
     .stApp {
-        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1419 100%);
         color: #e0e7ff;
-        font-family: 'Rajdhani', sans-serif;
+        font-family: 'Orbitron', sans-serif;
     }
     
-    .enterprise-header {
-        background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #6366f1 100%);
+    .warfare-header {
+        background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 50%, #dc2626 100%);
         padding: 2rem;
         border-radius: 12px;
         text-align: center;
         margin-bottom: 2rem;
-        box-shadow: 0 8px 32px rgba(79, 70, 229, 0.3);
+        box-shadow: 0 0 40px rgba(220, 38, 38, 0.5);
+        animation: pulse-red 3s infinite;
     }
     
-    .enterprise-header h1 {
-        font-size: 3rem;
-        font-weight: 700;
+    @keyframes pulse-red {
+        0%, 100% { box-shadow: 0 0 40px rgba(220, 38, 38, 0.5); }
+        50% { box-shadow: 0 0 60px rgba(220, 38, 38, 0.8); }
+    }
+    
+    .warfare-header h1 {
+        font-size: 3.5rem;
+        font-weight: 900;
         margin: 0;
-        text-shadow: 0 0 20px rgba(255,255,255,0.5);
+        text-shadow: 0 0 20px rgba(255,255,255,0.8);
+        letter-spacing: 4px;
     }
     
-    .status-panel {
-        background: rgba(30, 41, 59, 0.6);
-        border: 1px solid #475569;
+    .red-team-panel {
+        background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+        border: 2px solid #dc2626;
         border-radius: 10px;
         padding: 1.5rem;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+        animation: glow-red 2s infinite;
     }
     
-    .metric-enterprise {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border: 1px solid #334155;
-        border-left: 4px solid #6366f1;
-        border-radius: 8px;
+    @keyframes glow-red {
+        0%, 100% { border-color: #dc2626; }
+        50% { border-color: #ef4444; }
+    }
+    
+    .blue-team-panel {
+        background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%);
+        border: 2px solid #0ea5e9;
+        border-radius: 10px;
         padding: 1.5rem;
+        box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+        animation: glow-blue 2s infinite;
+    }
+    
+    @keyframes glow-blue {
+        0%, 100% { border-color: #0ea5e9; }
+        50% { border-color: #38bdf8; }
+    }
+    
+    .attack-card {
+        background: rgba(127, 29, 29, 0.3);
+        border-left: 4px solid #dc2626;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
         transition: all 0.3s ease;
     }
     
-    .metric-enterprise:hover {
-        border-left-color: #818cf8;
+    .attack-card:hover {
+        background: rgba(127, 29, 29, 0.5);
         transform: translateX(5px);
-        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+        box-shadow: 0 0 15px rgba(220, 38, 38, 0.5);
     }
     
-    .metric-value-enterprise {
-        font-size: 3rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #818cf8 0%, #c4b5fd 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    .live-feed {
-        background: #0f172a;
-        border: 1px solid #334155;
+    .defense-card {
+        background: rgba(12, 74, 110, 0.3);
+        border-left: 4px solid #0ea5e9;
         border-radius: 8px;
         padding: 1rem;
-        height: 500px;
-        overflow-y: auto;
-        font-family: 'Courier New', monospace;
+        margin: 0.5rem 0;
+        transition: all 0.3s ease;
     }
     
-    .live-feed::-webkit-scrollbar {
+    .defense-card:hover {
+        background: rgba(12, 74, 110, 0.5);
+        transform: translateX(5px);
+        box-shadow: 0 0 15px rgba(14, 165, 233, 0.5);
+    }
+    
+    .metric-warfare {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid #475569;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        backdrop-filter: blur(10px);
+    }
+    
+    .metric-value-red {
+        font-size: 3rem;
+        font-weight: 900;
+        color: #ef4444;
+        text-shadow: 0 0 10px #ef4444;
+    }
+    
+    .metric-value-blue {
+        font-size: 3rem;
+        font-weight: 900;
+        color: #38bdf8;
+        text-shadow: 0 0 10px #38bdf8;
+    }
+    
+    .kill-chain-stage {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid #475569;
+        border-radius: 6px;
+        padding: 0.8rem;
+        margin: 0.3rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .kill-chain-stage.active {
+        background: rgba(127, 29, 29, 0.8);
+        border-color: #dc2626;
+        box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
+        animation: pulse-stage 1s infinite;
+    }
+    
+    @keyframes pulse-stage {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .live-terminal {
+        background: #000;
+        border: 2px solid #475569;
+        border-radius: 8px;
+        padding: 1rem;
+        height: 400px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+    }
+    
+    .live-terminal::-webkit-scrollbar {
         width: 8px;
     }
     
-    .live-feed::-webkit-scrollbar-thumb {
+    .live-terminal::-webkit-scrollbar-thumb {
         background: #6366f1;
         border-radius: 4px;
     }
     
-    .badge-enterprise {
-        display: inline-block;
-        padding: 0.4rem 0.8rem;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.8rem;
+    .badge-attack {
+        background: #7f1d1d;
+        color: #fecaca;
+        padding: 0.3rem 0.8rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
     }
     
-    .badge-critical { background: #7f1d1d; color: #fca5a5; }
-    .badge-high { background: #7c2d12; color: #fdba74; }
-    .badge-medium { background: #713f12; color: #fde047; }
-    .badge-low { background: #14532d; color: #86efac; }
-    .badge-operational { background: #1e3a8a; color: #93c5fd; }
+    .badge-defense {
+        background: #0c4a6e;
+        color: #bae6fd;
+        padding: 0.3rem 0.8rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
     
-    .infrastructure-card {
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid #334155;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin: 1rem 0;
+    .score-board {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 2px solid #6366f1;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .action-button {
+        background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+        border: none;
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
         transition: all 0.3s ease;
+        text-transform: uppercase;
     }
     
-    .infrastructure-card:hover {
-        border-color: #6366f1;
-        box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+    .action-button:hover {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
+        transform: translateY(-2px);
     }
 </style>
 """, unsafe_allow_html=True)
 
-class EnterpriseITPlatform:
-    """Enterprise IT Infrastructure Management Platform"""
+# === CORE CLASSES ===
+
+class MITREAttackFramework:
+    """MITRE ATT&CK Framework Integration"""
+    
+    TACTICS = {
+        "Reconnaissance": ["Active Scanning", "Gather Victim Network Info", "Search Open Websites"],
+        "Initial Access": ["Phishing", "Exploit Public-Facing App", "Valid Accounts"],
+        "Execution": ["Command Scripting", "User Execution", "Scheduled Task"],
+        "Persistence": ["Create Account", "Boot/Logon Scripts", "Registry Run Keys"],
+        "Privilege Escalation": ["Sudo/Sudo Caching", "Exploitation", "Access Token Manipulation"],
+        "Defense Evasion": ["Obfuscation", "Disable Security Tools", "Clear Logs"],
+        "Credential Access": ["Brute Force", "Credential Dumping", "Keylogging"],
+        "Discovery": ["Network Service Scan", "System Information", "Account Discovery"],
+        "Lateral Movement": ["Remote Services", "Exploitation of Remote Services", "Internal Spearphishing"],
+        "Collection": ["Data from Local System", "Screen Capture", "Email Collection"],
+        "Exfiltration": ["Exfil Over C2 Channel", "Exfil to Cloud Storage", "Automated Exfil"],
+        "Impact": ["Data Encrypted for Impact", "Service Stop", "Resource Hijacking"]
+    }
+    
+    @staticmethod
+    def get_attack_sequence():
+        """Generate realistic attack sequence"""
+        sequence = []
+        tactics = list(MITREAttackFramework.TACTICS.keys())
+        
+        # Realistic attack flow
+        attack_flow = ["Reconnaissance", "Initial Access", "Execution", "Persistence", 
+                      "Privilege Escalation", "Defense Evasion", "Discovery", 
+                      "Lateral Movement", "Collection", "Exfiltration", "Impact"]
+        
+        for tactic in attack_flow:
+            if tactic in MITREAttackFramework.TACTICS:
+                technique = random.choice(MITREAttackFramework.TACTICS[tactic])
+                sequence.append({"tactic": tactic, "technique": technique})
+        
+        return sequence
+
+class NetworkTopology:
+    """Network Infrastructure Simulation"""
     
     def __init__(self):
-        self.company = "Global Tech Enterprises"
-        self.init_enterprise_data()
+        self.graph = nx.DiGraph()
+        self.build_network()
     
-    def init_enterprise_data(self):
-        """Initialize enterprise infrastructure"""
+    def build_network(self):
+        """Build realistic network topology"""
+        # Internet
+        self.graph.add_node("Internet", type="external", compromised=False)
         
-        # IT Leadership
-        self.it_leadership = {
-            "cto": {
-                "username": "cto",
-                "password": self.hash("Enterprise@2024"),
-                "name": "Dr. Marcus Chen",
-                "title": "Chief Technology Officer",
-                "department": "Executive Leadership"
-            },
-            "it_director": {
-                "username": "it_director",
-                "password": self.hash("Enterprise@2024"),
-                "name": "Jennifer Walsh",
-                "title": "IT Infrastructure Director",
-                "department": "IT Operations"
-            },
-            "security_officer": {
-                "username": "security_officer",
-                "password": self.hash("Enterprise@2024"),
-                "name": "David Kumar",
-                "title": "Chief Security Officer",
-                "department": "InfoSec"
-            }
+        # DMZ
+        dmz_assets = ["Web-Server-01", "Mail-Server-01", "DNS-Server-01"]
+        for asset in dmz_assets:
+            self.graph.add_node(asset, type="dmz", compromised=False, value=5)
+            self.graph.add_edge("Internet", asset)
+        
+        # Firewall
+        self.graph.add_node("Firewall", type="security", compromised=False)
+        for asset in dmz_assets:
+            self.graph.add_edge(asset, "Firewall")
+        
+        # Internal Network
+        internal_subnets = {
+            "Corporate": ["WS-Corp-01", "WS-Corp-02", "WS-Corp-03", "File-Server-01"],
+            "Finance": ["WS-Fin-01", "WS-Fin-02", "DB-Finance-01"],
+            "Engineering": ["WS-Eng-01", "WS-Eng-02", "WS-Eng-03", "DB-Product-01"],
+            "Executive": ["WS-Exec-01", "Email-Server-01"]
         }
         
-        # Global Infrastructure
-        self.data_centers = {
-            "DC-US-EAST": {"location": "Virginia, USA", "capacity": "15000 servers", "uptime": 99.99},
-            "DC-US-WEST": {"location": "Oregon, USA", "capacity": "12000 servers", "uptime": 99.98},
-            "DC-EU-CENTRAL": {"location": "Frankfurt, Germany", "capacity": "10000 servers", "uptime": 99.97},
-            "DC-ASIA-PAC": {"location": "Singapore", "capacity": "8000 servers", "uptime": 99.96}
+        for subnet, assets in internal_subnets.items():
+            for asset in assets:
+                value = 10 if "DB" in asset or "Exec" in asset else 3
+                self.graph.add_node(asset, type=subnet, compromised=False, value=value)
+                self.graph.add_edge("Firewall", asset)
+        
+        # Domain Controller
+        self.graph.add_node("DC-01", type="critical", compromised=False, value=20)
+        self.graph.add_edge("Firewall", "DC-01")
+        
+        # Backup Server
+        self.graph.add_node("Backup-Server-01", type="critical", compromised=False, value=15)
+        self.graph.add_edge("Firewall", "Backup-Server-01")
+    
+    def get_initial_targets(self):
+        """Get possible initial compromise targets"""
+        return [n for n in self.graph.nodes() if self.graph.nodes[n].get('type') == 'dmz']
+    
+    def get_neighbors(self, node):
+        """Get accessible nodes from current position"""
+        return list(self.graph.successors(node))
+    
+    def compromise_node(self, node):
+        """Mark node as compromised"""
+        self.graph.nodes[node]['compromised'] = True
+    
+    def get_compromised_nodes(self):
+        """Get all compromised nodes"""
+        return [n for n in self.graph.nodes() if self.graph.nodes[n].get('compromised', False)]
+    
+    def get_node_value(self, node):
+        """Get strategic value of node"""
+        return self.graph.nodes[node].get('value', 1)
+
+class AttackCampaign:
+    """Red Team Attack Campaign"""
+    
+    def __init__(self, campaign_id, attack_type, difficulty):
+        self.id = campaign_id
+        self.attack_type = attack_type
+        self.difficulty = difficulty
+        self.status = "Planning"
+        self.current_stage = 0
+        self.attack_sequence = MITREAttackFramework.get_attack_sequence()
+        self.compromised_assets = []
+        self.data_exfiltrated = 0
+        self.detected = False
+        self.success_probability = 0.0
+        self.started_at = None
+        self.ended_at = None
+        self.score = 0
+        self.stealth_level = random.randint(60, 95)
+    
+    def advance_stage(self):
+        """Progress to next attack stage"""
+        if self.current_stage < len(self.attack_sequence):
+            self.current_stage += 1
+            return True
+        return False
+    
+    def get_current_tactic(self):
+        """Get current MITRE tactic"""
+        if self.current_stage < len(self.attack_sequence):
+            return self.attack_sequence[self.current_stage]
+        return None
+    
+    def calculate_success(self):
+        """Calculate attack success probability"""
+        base_probability = {
+            "Easy": 0.8,
+            "Medium": 0.6,
+            "Hard": 0.4
         }
         
-        # Business Applications
-        self.business_apps = []
-        self.generate_business_apps()
+        # Adjust based on stealth and detection
+        prob = base_probability.get(self.difficulty, 0.5)
         
-        # Network Infrastructure
-        self.network_devices = []
-        self.generate_network_devices()
+        if self.detected:
+            prob *= 0.3  # Much harder if detected
         
-        # Data Pipeline
-        self.data_pipelines = []
-        self.generate_data_pipelines()
+        prob *= (self.stealth_level / 100)
         
-        # Real-time Metrics
-        self.metrics_stream = deque(maxlen=500)
-        self.generate_metrics()
-        
-        # Incidents
-        self.incidents = {}
-        
-        # Audit Log
-        self.audit_log = deque(maxlen=1000)
-        self.log_audit("System initialized", "SYSTEM")
+        return min(0.95, prob)
+
+class DefenseAction:
+    """Blue Team Defense Action"""
     
-    def hash(self, password):
-        return hashlib.sha256(f"enterprise_{password}".encode()).hexdigest()
+    def __init__(self, action_type, target, effectiveness):
+        self.action_type = action_type
+        self.target = target
+        self.effectiveness = effectiveness
+        self.timestamp = datetime.now()
+        self.success = random.random() < effectiveness
+
+class CyberWarfareSimulation:
+    """Main Simulation Engine"""
     
-    def log_audit(self, message, level="INFO"):
+    def __init__(self):
+        self.network = NetworkTopology()
+        self.active_campaigns = {}
+        self.event_log = deque(maxlen=500)
+        self.defense_actions = []
+        self.red_team_score = 0
+        self.blue_team_score = 0
+        self.simulation_running = False
+        self.detection_alerts = deque(maxlen=100)
+        self.current_time = datetime.now()
+        
+        # Security Controls
+        self.security_controls = {
+            "Firewall": {"enabled": True, "effectiveness": 0.7},
+            "IDS/IPS": {"enabled": True, "effectiveness": 0.6},
+            "EDR": {"enabled": True, "effectiveness": 0.8},
+            "SIEM": {"enabled": True, "effectiveness": 0.7},
+            "Network Segmentation": {"enabled": True, "effectiveness": 0.5},
+            "MFA": {"enabled": True, "effectiveness": 0.9}
+        }
+        
+        self.log_event("Cyber Warfare Simulation initialized", "SYSTEM", "blue")
+    
+    def log_event(self, message, level="INFO", team="neutral"):
+        """Log simulation event"""
         colors = {
-            "CRITICAL": "#ef4444",
+            "CRITICAL": "#dc2626",
             "HIGH": "#f97316",
             "MEDIUM": "#eab308",
             "INFO": "#6366f1",
-            "SUCCESS": "#22c55e"
+            "SUCCESS": "#22c55e",
+            "ATTACK": "#dc2626",
+            "DEFENSE": "#0ea5e9"
         }
         
-        log_entry = f"<span style='color: {colors.get(level, '#94a3b8')}'>[{datetime.now():%H:%M:%S}]</span> <strong>[{level}]</strong> {message}"
-        self.audit_log.appendleft(log_entry)
-    
-    def generate_business_apps(self):
-        """Generate business application inventory"""
-        apps = [
-            {"name": "SAP ERP", "category": "ERP", "criticality": "Critical", "users": 5400},
-            {"name": "Salesforce CRM", "category": "CRM", "criticality": "High", "users": 3200},
-            {"name": "Microsoft 365", "category": "Productivity", "criticality": "Critical", "users": 12500},
-            {"name": "Workday HCM", "category": "HR", "criticality": "High", "users": 1800},
-            {"name": "Tableau Analytics", "category": "BI", "criticality": "Medium", "users": 850},
-            {"name": "Jira Software", "category": "DevOps", "criticality": "High", "users": 2100},
-            {"name": "ServiceNow ITSM", "category": "ITSM", "criticality": "Critical", "users": 600},
-            {"name": "Confluence", "category": "Collaboration", "criticality": "Medium", "users": 4500}
-        ]
-        
-        for app in apps:
-            app.update({
-                "status": random.choice(["Operational", "Operational", "Operational", "Degraded"]),
-                "response_time_ms": random.randint(50, 500),
-                "error_rate": round(random.uniform(0, 2.5), 2),
-                "availability": round(random.uniform(99.5, 99.99), 2),
-                "last_deployment": datetime.now() - timedelta(days=random.randint(1, 90))
-            })
-            self.business_apps.append(app)
-    
-    def generate_network_devices(self):
-        """Generate network infrastructure"""
-        device_types = [
-            {"type": "Core Router", "count": 12},
-            {"type": "Distribution Switch", "count": 48},
-            {"type": "Access Switch", "count": 320},
-            {"type": "Firewall", "count": 24},
-            {"type": "Load Balancer", "count": 16},
-            {"type": "VPN Gateway", "count": 8}
-        ]
-        
-        for device_type in device_types:
-            for i in range(device_type["count"]):
-                device = {
-                    "device_id": f"{device_type['type'].replace(' ', '-').upper()}-{i+1:03d}",
-                    "type": device_type['type'],
-                    "location": random.choice(list(self.data_centers.keys())),
-                    "status": random.choice(["Online", "Online", "Online", "Warning"]),
-                    "cpu_usage": random.randint(10, 85),
-                    "memory_usage": random.randint(30, 90),
-                    "uptime_days": random.randint(1, 365),
-                    "throughput_gbps": round(random.uniform(0.5, 10), 2)
-                }
-                self.network_devices.append(device)
-    
-    def generate_data_pipelines(self):
-        """Generate data pipeline monitoring"""
-        pipelines = [
-            {"name": "Customer Data ETL", "source": "PostgreSQL", "destination": "Snowflake"},
-            {"name": "Sales Analytics", "source": "Salesforce API", "destination": "BigQuery"},
-            {"name": "Log Aggregation", "source": "CloudWatch", "destination": "Elasticsearch"},
-            {"name": "Real-time Events", "source": "Kafka", "destination": "Redshift"},
-            {"name": "Backup Sync", "source": "Production DB", "destination": "S3 Glacier"}
-        ]
-        
-        for pipeline in pipelines:
-            pipeline.update({
-                "status": random.choice(["Running", "Running", "Running", "Failed"]),
-                "records_processed": random.randint(10000, 5000000),
-                "last_run": datetime.now() - timedelta(hours=random.randint(1, 24)),
-                "avg_duration_min": random.randint(5, 120),
-                "success_rate": round(random.uniform(95, 100), 1)
-            })
-            self.data_pipelines.append(pipeline)
-    
-    def generate_metrics(self):
-        """Generate real-time system metrics"""
-        for _ in range(100):
-            metric = {
-                "timestamp": datetime.now() - timedelta(seconds=random.randint(0, 300)),
-                "cpu_cluster": round(random.uniform(30, 75), 1),
-                "memory_cluster": round(random.uniform(45, 85), 1),
-                "network_throughput_gbps": round(random.uniform(5, 25), 2),
-                "active_sessions": random.randint(8000, 15000),
-                "api_requests_per_sec": random.randint(500, 3000)
-            }
-            self.metrics_stream.append(metric)
-    
-    def create_incident(self):
-        """Create a new IT incident"""
-        incident_types = [
-            "Service Degradation",
-            "Database Performance Issue",
-            "Network Connectivity Problem",
-            "Application Error Spike",
-            "Storage Capacity Alert",
-            "Security Vulnerability Detected"
-        ]
-        
-        incident_id = f"INC-{random.randint(10000, 99999)}"
-        
-        incident = {
-            "id": incident_id,
-            "title": random.choice(incident_types),
-            "severity": random.choice(["Critical", "High", "Medium"]),
-            "status": "Open",
-            "created": datetime.now(),
-            "affected_service": random.choice([app["name"] for app in self.business_apps]),
-            "impact": f"{random.randint(100, 5000)} users affected",
-            "assigned_to": "Incident Response Team",
-            "timeline": [f"{datetime.now():%H:%M:%S} - Incident detected and logged"]
+        team_colors = {
+            "red": "#dc2626",
+            "blue": "#0ea5e9",
+            "neutral": "#94a3b8"
         }
         
-        self.incidents[incident_id] = incident
-        self.log_audit(f"New incident created: {incident_id} - {incident['title']}", "CRITICAL")
+        timestamp = self.current_time.strftime('%H:%M:%S')
+        color = colors.get(level, team_colors.get(team, '#94a3b8'))
         
-        return incident_id
+        log_entry = f"<span style='color: {color}'>[{timestamp}]</span> <strong>[{level}]</strong> {message}"
+        self.event_log.appendleft(log_entry)
     
-    def calculate_health_score(self):
-        """Calculate overall IT infrastructure health"""
+    def launch_attack_campaign(self, attack_type, difficulty):
+        """Launch new Red Team campaign"""
+        campaign_id = f"RED-{len(self.active_campaigns) + 1:03d}"
         
-        # Application health
-        operational_apps = len([app for app in self.business_apps if app["status"] == "Operational"])
-        app_health = (operational_apps / len(self.business_apps)) * 30
+        campaign = AttackCampaign(campaign_id, attack_type, difficulty)
+        campaign.status = "Active"
+        campaign.started_at = self.current_time
         
-        # Network health
-        online_devices = len([dev for dev in self.network_devices if dev["status"] == "Online"])
-        network_health = (online_devices / len(self.network_devices)) * 25
+        self.active_campaigns[campaign_id] = campaign
         
-        # Pipeline health
-        running_pipelines = len([p for p in self.data_pipelines if p["status"] == "Running"])
-        pipeline_health = (running_pipelines / len(self.data_pipelines)) * 20
+        self.log_event(f"🚨 Attack Campaign Launched: {campaign_id} - {attack_type} ({difficulty})", "ATTACK", "red")
         
-        # Incident penalty
-        open_incidents = len([inc for inc in self.incidents.values() if inc["status"] == "Open"])
-        incident_penalty = open_incidents * 5
-        
-        # Data center uptime
-        avg_uptime = sum(dc["uptime"] for dc in self.data_centers.values()) / len(self.data_centers)
-        dc_health = (avg_uptime / 100) * 25
-        
-        total_health = app_health + network_health + pipeline_health + dc_health - incident_penalty
-        total_health = max(0, min(100, total_health))
-        
-        return round(total_health, 1)
-
-# Initialize Platform
-if 'enterprise_platform' not in st.session_state:
-    st.session_state.enterprise_platform = EnterpriseITPlatform()
-    st.session_state.enterprise_auth = False
-    st.session_state.enterprise_user = None
-
-def render_enterprise_login():
-    """Enterprise Login Portal"""
-    platform = st.session_state.enterprise_platform
+        return campaign_id
     
-    st.markdown(f"""
-    <div class="enterprise-header">
-        <h1>🛡️ {platform.company}</h1>
-        <p style="font-size: 1.5rem; margin: 0.5rem 0;">Enterprise IT Command Center</p>
-        <p style="opacity: 0.8;">Infrastructure Management & Security Operations</p>
+    def execute_attack_stage(self, campaign_id):
+        """Execute attack stage"""
+        if campaign_id not in self.active_campaigns:
+            return False
+        
+        campaign = self.active_campaigns[campaign_id]
+        tactic = campaign.get_current_tactic()
+        
+        if not tactic:
+            return False
+        
+        # Simulate attack execution
+        success_prob = campaign.calculate_success()
+        success = random.random() < success_prob
+        
+        if success:
+            # Attack stage succeeded
+            campaign.advance_stage()
+            campaign.score += 10
+            self.red_team_score += 10
+            
+            # Check if detected
+            detection_prob = 0.3 * (1 - campaign.stealth_level / 100)
+            for control_name, control in self.security_controls.items():
+                if control["enabled"]:
+                    detection_prob += control["effectiveness"] * 0.1
+            
+            if random.random() < detection_prob:
+                campaign.detected = True
+                campaign.stealth_level = max(20, campaign.stealth_level - 20)
+                self.log_event(f"⚠️ Attack Detected: {campaign.id} - {tactic['tactic']}", "CRITICAL", "blue")
+                self.create_detection_alert(campaign, tactic)
+            else:
+                self.log_event(f"🔴 Attack Stage Success: {campaign.id} - {tactic['technique']}", "ATTACK", "red")
+            
+            # Compromise asset if applicable
+            if tactic['tactic'] in ["Initial Access", "Lateral Movement"]:
+                self.compromise_random_asset(campaign)
+            
+            return True
+        else:
+            campaign.detected = True
+            self.log_event(f"🔴 Attack Stage Failed: {campaign.id} - {tactic['technique']}", "MEDIUM", "red")
+            return False
+    
+    def compromise_random_asset(self, campaign):
+        """Compromise a network asset"""
+        if not campaign.compromised_assets:
+            # Initial compromise
+            targets = self.network.get_initial_targets()
+        else:
+            # Lateral movement
+            current_position = campaign.compromised_assets[-1]
+            targets = self.network.get_neighbors(current_position)
+            targets = [t for t in targets if t not in campaign.compromised_assets]
+        
+        if targets:
+            target = random.choice(targets)
+            self.network.compromise_node(target)
+            campaign.compromised_assets.append(target)
+            
+            value = self.network.get_node_value(target)
+            campaign.score += value * 5
+            self.red_team_score += value * 5
+            
+            self.log_event(f"💀 Asset Compromised: {target} by {campaign.id}", "CRITICAL", "red")
+    
+    def create_detection_alert(self, campaign, tactic):
+        """Create security alert"""
+        alert = {
+            "id": f"ALERT-{len(self.detection_alerts) + 1:04d}",
+            "campaign": campaign.id,
+            "tactic": tactic['tactic'],
+            "technique": tactic['technique'],
+            "severity": "Critical" if campaign.current_stage > 5 else "High",
+            "timestamp": self.current_time,
+            "investigated": False,
+            "mitigated": False
+        }
+        
+        self.detection_alerts.appendleft(alert)
+    
+    def execute_defense_action(self, action_type, target, campaign_id=None):
+        """Execute Blue Team defense action"""
+        effectiveness = {
+            "Investigate Alert": 0.8,
+            "Block IP": 0.9,
+            "Isolate Asset": 0.95,
+            "Kill Process": 0.85,
+            "Patch Vulnerability": 0.7,
+            "Enable Security Control": 0.6,
+            "Hunt Threats": 0.5,
+            "Forensic Analysis": 0.7
+        }
+        
+        action = DefenseAction(action_type, target, effectiveness.get(action_type, 0.5))
+        self.defense_actions.append(action)
+        
+        if action.success:
+            self.blue_team_score += 15
+            self.log_event(f"🔵 Defense Success: {action_type} on {target}", "DEFENSE", "blue")
+            
+            # Impact on active campaign
+            if campaign_id and campaign_id in self.active_campaigns:
+                campaign = self.active_campaigns[campaign_id]
+                campaign.stealth_level = max(10, campaign.stealth_level - 30)
+                campaign.detected = True
+                
+                # Potentially stop the attack
+                if random.random() < 0.4:
+                    campaign.status = "Neutralized"
+                    self.log_event(f"✅ Campaign Neutralized: {campaign_id}", "SUCCESS", "blue")
+            
+            return True
+        else:
+            self.log_event(f"🔵 Defense Failed: {action_type} on {target}", "MEDIUM", "blue")
+            return False
+    
+    def update_simulation(self):
+        """Update simulation state"""
+        self.current_time = datetime.now()
+        
+        # Auto-progress active campaigns
+        for campaign_id, campaign in list(self.active_campaigns.items()):
+            if campaign.status == "Active" and not campaign.detected:
+                # Random chance to auto-advance
+                if random.random() < 0.3:
+                    self.execute_attack_stage(campaign_id)
+            
+            # Check if campaign completed
+            if campaign.current_stage >= len(campaign.attack_sequence):
+                campaign.status = "Completed"
+                campaign.ended_at = self.current_time
+                self.log_event(f"🏁 Campaign Completed: {campaign_id}", "CRITICAL", "red")
+
+# === SESSION STATE INITIALIZATION ===
+
+if 'warfare_sim' not in st.session_state:
+    st.session_state.warfare_sim = CyberWarfareSimulation()
+    st.session_state.authenticated = False
+    st.session_state.user_team = None
+    st.session_state.last_update = time.time()
+
+# === AUTHENTICATION ===
+
+def render_team_selection():
+    """Team selection screen"""
+    
+    st.markdown("""
+    <div class="warfare-header">
+        <h1>⚔️ CYBER WARFARE SIMULATION ⚔️</h1>
+        <p style="font-size: 1.5rem; margin: 1rem 0;">Red Team vs Blue Team Combat Training</p>
+        <p style="opacity: 0.9;">Advanced Attack & Defense Simulation Platform</p>
     </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        st.markdown("<h2 style='text-align: center;'>🔐 Executive Access Portal</h2>", unsafe_allow_html=True)
+        st.markdown("### 🎯 SELECT YOUR TEAM")
         
-        with st.form("enterprise_login"):
-            username = st.text_input("👤 Username", placeholder="Enter your corporate username")
-            password = st.text_input("🔑 Password", type="password", placeholder="Enter your password")
-            
-            submit = st.form_submit_button("🚀 Access Command Center", use_container_width=True)
-            
-            if submit:
-                if username in platform.it_leadership and platform.hash(password) == platform.it_leadership[username]["password"]:
-                    st.session_state.enterprise_auth = True
-                    st.session_state.enterprise_user = username
-                    platform.log_audit(f"Login successful: {platform.it_leadership[username]['name']}", "INFO")
-                    st.success("✓ Authentication Successful")
-                    time.sleep(0.5)
-                    st.rerun()
-                else:
-                    st.error("✗ Authentication Failed")
+        team_choice = st.radio(
+            "Choose your side:",
+            ["🔴 Red Team (Offensive Security)", "🔵 Blue Team (Defensive Security)", "👁️ Observer Mode"],
+            label_visibility="collapsed"
+        )
         
         st.markdown("---")
-        st.markdown("### 👥 Executive Access Credentials")
         
-        col1, col2, col3 = st.columns(3)
+        col_a, col_b = st.columns(2)
         
-        with col1:
-            st.markdown("""
-            **CTO**  
-            Username: `cto`  
-            Password: `Enterprise@2024`
-            """)
+        with col_a:
+            if "Red Team" in team_choice:
+                st.markdown("""
+                <div class="red-team-panel">
+                    <h3 style="color: #ef4444; margin: 0;">🔴 RED TEAM</h3>
+                    <p style="margin: 1rem 0;">Offensive Security</p>
+                    <ul style="text-align: left;">
+                        <li>Launch attack campaigns</li>
+                        <li>Exploit vulnerabilities</li>
+                        <li>Evade detection</li>
+                        <li>Compromise assets</li>
+                        <li>Exfiltrate data</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
         
-        with col2:
-            st.markdown("""
-            **IT Director**  
-            Username: `it_director`  
-            Password: `Enterprise@2024`
-            """)
+        with col_b:
+            if "Blue Team" in team_choice:
+                st.markdown("""
+                <div class="blue-team-panel">
+                    <h3 style="color: #38bdf8; margin: 0;">🔵 BLUE TEAM</h3>
+                    <p style="margin: 1rem 0;">Defensive Security</p>
+                    <ul style="text-align: left;">
+                        <li>Detect threats</li>
+                        <li>Investigate alerts</li>
+                        <li>Neutralize attacks</li>
+                        <li>Secure assets</li>
+                        <li>Hunt adversaries</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
         
-        with col3:
-            st.markdown("""
-            **Security Officer**  
-            Username: `security_officer`  
-            Password: `Enterprise@2024`
-            """)
+        st.markdown("---")
+        
+        if st.button("⚡ ENTER BATTLEFIELD", use_container_width=True):
+            if "Red Team" in team_choice:
+                st.session_state.user_team = "red"
+            elif "Blue Team" in team_choice:
+                st.session_state.user_team = "blue"
+            else:
+                st.session_state.user_team = "observer"
+            
+            st.session_state.authenticated = True
+            st.success("✓ Access Granted - Entering Combat Zone")
+            time.sleep(0.5)
+            st.rerun()
 
-def render_enterprise_dashboard():
-    """Enterprise Command Center Dashboard"""
-    platform = st.session_state.enterprise_platform
-    user = platform.it_leadership[st.session_state.enterprise_user]
+# === MAIN DASHBOARD ===
+
+def render_warfare_dashboard():
+    """Main warfare simulation dashboard"""
+    sim = st.session_state.warfare_sim
+    team = st.session_state.user_team
+    
+    # Update simulation
+    now = time.time()
+    if now - st.session_state.last_update > 2:  # Update every 2 seconds
+        sim.update_simulation()
+        st.session_state.last_update = now
     
     # Header
+    team_name = {
+        "red": "🔴 RED TEAM - OFFENSIVE OPS",
+        "blue": "🔵 BLUE TEAM - DEFENSIVE OPS",
+        "observer": "👁️ OBSERVER MODE"
+    }
+    
     st.markdown(f"""
-    <div class="enterprise-header">
-        <h1>🛡️ {platform.company} - IT Command Center</h1>
-        <p style="margin: 0.5rem 0;">Welcome, {user['name']} | {user['title']}</p>
-        <p style="opacity: 0.8;">{datetime.now().strftime('%A, %B %d, %Y - %H:%M:%S')}</p>
+    <div class="warfare-header">
+        <h1>{team_name.get(team, 'CYBER WARFARE')}</h1>
+        <p style="font-size: 1.2rem; margin: 0.5rem 0;">{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     </div>
     """, unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
-        st.markdown(f"### 👤 {user['name']}")
-        st.caption(user['title'])
-        st.caption(user['department'])
+        st.markdown(f"### {team_name.get(team, 'MODE')}")
+        
+        st.markdown("---")
+        st.markdown("### 📊 SIMULATION CONTROL")
+        
+        if st.button("🔄 Update Simulation", use_container_width=True):
+            sim.update_simulation()
+            st.rerun()
+        
+        if st.button("🔥 Auto-Progress ON/OFF", use_container_width=True):
+            sim.simulation_running = not sim.simulation_running
+        
+        st.markdown("---")
+        st.markdown("### 🎯 QUICK STATS")
+        st.metric("Red Team Score", sim.red_team_score)
+        st.metric("Blue Team Score", sim.blue_team_score)
+        st.metric("Active Campaigns", len([c for c in sim.active_campaigns.values() if c.status == "Active"]))
+        st.metric("Compromised Assets", len(sim.network.get_compromised_nodes()))
         
         st.markdown("---")
         
-        module = st.radio("🎛️ Command Modules", [
-            "🏠 Executive Dashboard",
-            "💼 Business Applications",
-            "🌐 Network Infrastructure",
-            "📊 Data Operations",
-            "🚨 Incident Management",
-            "🏢 Data Centers",
-            "📈 Real-time Analytics"
-        ])
-        
-        st.markdown("---")
-        
-        if st.button("🔥 SIMULATE INCIDENT", use_container_width=True):
-            inc_id = platform.create_incident()
-            st.warning(f"Incident {inc_id} created!")
-            st.rerun()
-        
-        if st.button("🔄 Refresh", use_container_width=True):
-            platform.generate_metrics()
-            st.rerun()
-        
-        if st.button("🚪 Logout", use_container_width=True):
-            st.session_state.enterprise_auth = False
+        if st.button("🚪 Exit Simulation", use_container_width=True):
+            st.session_state.authenticated = False
             st.rerun()
     
-    # Route modules
-    if "Executive Dashboard" in module:
-        render_executive_dashboard(platform)
-    elif "Business Applications" in module:
-        render_business_apps(platform)
-    elif "Network Infrastructure" in module:
-        render_network_infra(platform)
-    elif "Data Operations" in module:
-        render_data_ops(platform)
-    elif "Incident Management" in module:
-        render_incident_mgmt(platform)
-    elif "Data Centers" in module:
-        render_data_centers(platform)
-    elif "Real-time Analytics" in module:
-        render_realtime_analytics(platform)
-
-def render_executive_dashboard(platform):
-    """Executive Overview Dashboard"""
+    # Scoreboard
+    render_scoreboard(sim)
     
-    # Health Score
-    health_score = platform.calculate_health_score()
+    st.markdown("---")
     
-    if health_score >= 95:
-        health_status = "EXCELLENT"
-        health_color = "#22c55e"
-    elif health_score >= 85:
-        health_status = "GOOD"
-        health_color = "#6366f1"
-    elif health_score >= 70:
-        health_status = "FAIR"
-        health_color = "#eab308"
+    # Team-specific interface
+    if team == "red":
+        render_red_team_interface(sim)
+    elif team == "blue":
+        render_blue_team_interface(sim)
     else:
-        health_status = "CRITICAL"
-        health_color = "#ef4444"
+        render_observer_interface(sim)
+
+def render_scoreboard(sim):
+    """Render score comparison"""
     
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 3rem; border-radius: 12px; text-align: center; border: 3px solid {health_color}; margin-bottom: 2rem;">
-        <h2 style="margin: 0; color: {health_color}; font-size: 2rem;">INFRASTRUCTURE HEALTH: {health_status}</h2>
-        <h1 style="margin: 1rem 0; font-size: 5rem; color: {health_color};">{health_score}%</h1>
-        <p style="opacity: 0.8;">Global IT Infrastructure Status</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Key Metrics
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns([1, 2, 1])
     
     with col1:
-        total_apps = len(platform.business_apps)
-        operational = len([app for app in platform.business_apps if app["status"] == "Operational"])
         st.markdown(f"""
-        <div class="metric-enterprise">
-            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">BUSINESS APPLICATIONS</div>
-            <div class="metric-value-enterprise">{operational}/{total_apps}</div>
-            <div style="font-size: 0.85rem; color: #64748b;">Operational</div>
+        <div class="score-board">
+            <h2 style="color: #ef4444; margin: 0;">🔴 RED TEAM</h2>
+            <h1 style="color: #ef4444; font-size: 4rem; margin: 1rem 0;">{sim.red_team_score}</h1>
+            <p style="color: #94a3b8;">Offensive Score</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
-        total_devices = len(platform.network_devices)
-        online = len([dev for dev in platform.network_devices if dev["status"] == "Online"])
-        st.markdown(f"""
-        <div class="metric-enterprise">
-            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">NETWORK DEVICES</div>
-            <div class="metric-value-enterprise">{online}/{total_devices}</div>
-            <div style="font-size: 0.85rem; color: #64748b;">Online</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        open_incidents = len([inc for inc in platform.incidents.values() if inc["status"] == "Open"])
-        st.markdown(f"""
-        <div class="metric-enterprise">
-            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">ACTIVE INCIDENTS</div>
-            <div class="metric-value-enterprise" style="background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{open_incidents}</div>
-            <div style="font-size: 0.85rem; color: #64748b;">Requiring Attention</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        avg_dc_uptime = sum(dc["uptime"] for dc in platform.data_centers.values()) / len(platform.data_centers)
-        st.markdown(f"""
-        <div class="metric-enterprise">
-            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 0.5rem;">DATA CENTER UPTIME</div>
-            <div class="metric-value-enterprise">{avg_dc_uptime:.2f}%</div>
-            <div style="font-size: 0.85rem; color: #64748b;">Average</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Charts and Live Feed
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.markdown("### 📊 Infrastructure Performance")
+        total_score = sim.red_team_score + sim.blue_team_score
+        if total_score > 0:
+            red_pct = (sim.red_team_score / total_score) * 100
+            blue_pct = (sim.blue_team_score / total_score) * 100
+        else:
+            red_pct = blue_pct = 50
         
-        # Time series data
-        metrics_df = pd.DataFrame(list(platform.metrics_stream))
-        metrics_df = metrics_df.sort_values('timestamp')
-        
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=metrics_df['timestamp'],
-            y=metrics_df['cpu_cluster'],
-            name='CPU Usage %',
-            line=dict(color='#6366f1', width=2)
-        ))
-        fig.add_trace(go.Scatter(
-            x=metrics_df['timestamp'],
-            y=metrics_df['memory_cluster'],
-            name='Memory Usage %',
-            line=dict(color='#8b5cf6', width=2)
-        ))
+        fig = go.Figure(data=[
+            go.Bar(name='Red Team', x=[sim.red_team_score], y=['Score'], orientation='h', marker_color='#dc2626'),
+            go.Bar(name='Blue Team', x=[sim.blue_team_score], y=['Score'], orientation='h', marker_color='#0ea5e9')
+        ])
         
         fig.update_layout(
+            barmode='stack',
             paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(15,23,42,0.8)',
+            plot_bgcolor='rgba(0,0,0,0)',
             font_color='#e0e7ff',
-            height=350,
+            height=200,
             showlegend=True,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5)
         )
         
         st.plotly_chart(fig, use_container_width=True)
     
-    with col2:
-        st.markdown("### 📡 Live Audit Log")
-        
-        log_html = '<div class="live-feed">'
-        for log in list(platform.audit_log)[:25]:
-            log_html += f'<div style="margin: 0.3rem 0; font-size: 0.85rem;">{log}</div>'
-        log_html += '</div>'
-        
-        st.markdown(log_html, unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""
+        <div class="score-board">
+            <h2 style="color: #38bdf8; margin: 0;">🔵 BLUE TEAM</h2>
+            <h1 style="color: #38bdf8; font-size: 4rem; margin: 1rem 0;">{sim.blue_team_score}</h1>
+            <p style="color: #94a3b8;">Defensive Score</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-def render_business_apps(platform):
-    """Business Applications Dashboard"""
-    st.markdown("### 💼 Business-Critical Applications")
+def render_red_team_interface(sim):
+    """Red Team operational interface"""
     
-    for app in platform.business_apps:
-        criticality_badge = f"badge-{app['criticality'].lower()}"
-        status_badge = "badge-operational" if app["status"] == "Operational" else "badge-critical"
+    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Attack Campaigns", "💀 Compromised Assets", "📊 Network Map", "📡 Attack Logs"])
+    
+    with tab1:
+        st.markdown("### 🔴 OFFENSIVE OPERATIONS")
         
-        with st.expander(f"**{app['name']}** ({app['category']}) - {app['users']} Users"):
-            col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.markdown("#### Launch New Attack")
+            
+            attack_type = st.selectbox("Attack Type", [
+                "APT Campaign",
+                "Ransomware Attack",
+                "Data Breach",
+                "Supply Chain Attack",
+                "Insider Threat Simulation",
+                "Zero-Day Exploit"
+            ])
+            
+            difficulty = st.select_slider("Difficulty", ["Easy", "Medium", "Hard"])
+            
+            if st.button("🚀 LAUNCH ATTACK", use_container_width=True):
+                campaign_id = sim.launch_attack_campaign(attack_type, difficulty)
+                st.success(f"✓ Campaign {campaign_id} Launched!")
+                time.sleep(0.5)
+                st.rerun()
+        
+        with col2:
+            st.markdown("#### Active Attack Campaigns")
+            
+            active_campaigns = {k: v for k, v in sim.active_campaigns.items() if v.status == "Active"}
+            
+            if not active_campaigns:
+                st.info("No active campaigns. Launch an attack to begin.")
+            else:
+                for campaign_id, campaign in active_campaigns.items():
+                    with st.expander(f"**{campaign_id}** - {campaign.attack_type} ({campaign.difficulty})"):
+                        
+                        # Progress bar
+                        progress = campaign.current_stage / len(campaign.attack_sequence)
+                        st.progress(progress, text=f"Stage {campaign.current_stage}/{len(campaign.attack_sequence)}")
+                        
+                        col_a, col_b = st.columns(2)
+                        
+                        with col_a:
+                            st.metric("Campaign Score", campaign.score)
+                            st.metric("Stealth Level", f"{campaign.stealth_level}%")
+                        
+                        with col_b:
+                            st.metric("Assets Compromised", len(campaign.compromised_assets))
+                            detected_status = "🚨 DETECTED" if campaign.detected else "✅ STEALTHY"
+                            st.metric("Detection Status", detected_status)
+                        
+                        # Current tactic
+                        current_tactic = campaign.get_current_tactic()
+                        if current_tactic:
+                            st.markdown(f"**Current Stage:** {current_tactic['tactic']} - {current_tactic['technique']}")
+                        
+                        # Actions
+                        col_x, col_y = st.columns(2)
+                        
+                        with col_x:
+                            if st.button(f"⚡ Execute Stage", key=f"exec_{campaign_id}"):
+                                success = sim.execute_attack_stage(campaign_id)
+                                if success:
+                                    st.success("✓ Stage executed successfully!")
+                                else:
+                                    st.error("✗ Stage execution failed!")
+                                time.sleep(0.5)
+                                st.rerun()
+                        
+                        with col_y:
+                            if st.button(f"🛑 Abort Campaign", key=f"abort_{campaign_id}"):
+                                sim.active_campaigns[campaign_id].status = "Aborted"
+                                sim.log_event(f"Campaign aborted: {campaign_id}", "INFO", "red")
+                                st.rerun()
+    
+    with tab2:
+        st.markdown("### 💀 COMPROMISED NETWORK ASSETS")
+        
+        compromised = sim.network.get_compromised_nodes()
+        
+        if not compromised:
+            st.info("No assets compromised yet. Continue attacking to gain foothold.")
+        else:
+            for asset in compromised:
+                value = sim.network.get_node_value(asset)
+                asset_type = sim.network.graph.nodes[asset].get('type', 'unknown')
+                
+                st.markdown(f"""
+                <div class="attack-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="font-size: 1.1rem;">{asset}</strong><br>
+                            <span style="color: #94a3b8;">Type: {asset_type} | Value: {value}</span>
+                        </div>
+                        <div>
+                            <span class="badge-attack">COMPROMISED</span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    with tab3:
+        render_network_visualization(sim, "red")
+    
+    with tab4:
+        render_event_log(sim, "red")
+
+def render_blue_team_interface(sim):
+    """Blue Team operational interface"""
+    
+    tab1, tab2, tab3, tab4 = st.tabs(["🚨 Security Alerts", "🔍 Threat Hunting", "🛡️ Security Controls", "📡 Defense Logs"])
+    
+    with tab1:
+        st.markdown("### 🔵 SECURITY OPERATIONS CENTER")
+        
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.markdown("#### Quick Actions")
+            
+            if st.button("🔍 Hunt for Threats", use_container_width=True):
+                success = sim.execute_defense_action("Hunt Threats", "Network", None)
+                if success:
+                    st.success("✓ Threat hunt completed!")
+                st.rerun()
+            
+            if st.button("🔒 Isolate All Compromised", use_container_width=True):
+                compromised = sim.network.get_compromised_nodes()
+                for asset in compromised:
+                    sim.execute_defense_action("Isolate Asset", asset, None)
+                st.success(f"✓ Isolated {len(compromised)} assets!")
+                st.rerun()
+            
+            if st.button("📊 Run Forensics", use_container_width=True):
+                sim.execute_defense_action("Forensic Analysis", "All Systems", None)
+                st.success("✓ Forensic analysis initiated!")
+                st.rerun()
+        
+        with col2:
+            st.markdown("#### Active Security Alerts")
+            
+            if not sim.detection_alerts:
+                st.success("✓ No active security alerts. System is clean.")
+            else:
+                for alert in list(sim.detection_alerts)[:10]:
+                    severity_badge = "badge-attack" if alert['severity'] == "Critical" else "badge-defense"
+                    
+                    with st.expander(f"**{alert['id']}** - {alert['tactic']} [{alert['severity']}]"):
+                        st.write(f"**Campaign:** {alert['campaign']}")
+                        st.write(f"**Technique:** {alert['technique']}")
+                        st.write(f"**Timestamp:** {alert['timestamp'].strftime('%H:%M:%S')}")
+                        st.write(f"**Investigated:** {'✅ Yes' if alert['investigated'] else '❌ No'}")
+                        
+                        col_a, col_b = st.columns(2)
+                        
+                        with col_a:
+                            if not alert['investigated'] and st.button(f"🔍 Investigate", key=f"inv_{alert['id']}"):
+                                success = sim.execute_defense_action("Investigate Alert", alert['id'], alert['campaign'])
+                                if success:
+                                    alert['investigated'] = True
+                                    st.success("✓ Investigation complete!")
+                                st.rerun()
+                        
+                        with col_b:
+                            if alert['investigated'] and not alert['mitigated']:
+                                if st.button(f"🛡️ Mitigate", key=f"mit_{alert['id']}"):
+                                    success = sim.execute_defense_action("Block IP", alert['campaign'], alert['campaign'])
+                                    if success:
+                                        alert['mitigated'] = True
+                                        st.success("✓ Threat mitigated!")
+                                    st.rerun()
+    
+    with tab2:
+        st.markdown("### 🔍 THREAT HUNTING OPERATIONS")
+        
+        st.markdown("#### Compromised Assets Detected")
+        
+        compromised = sim.network.get_compromised_nodes()
+        
+        if not compromised:
+            st.success("✓ No compromised assets detected. Network is secure.")
+        else:
+            st.error(f"🚨 {len(compromised)} assets have been compromised!")
+            
+            for asset in compromised:
+                asset_type = sim.network.graph.nodes[asset].get('type', 'unknown')
+                
+                col_a, col_b, col_c = st.columns([2, 1, 1])
+                
+                with col_a:
+                    st.markdown(f"**{asset}** ({asset_type})")
+                
+                with col_b:
+                    st.markdown(f"<span class='badge-attack'>COMPROMISED</span>", unsafe_allow_html=True)
+                
+                with col_c:
+                    if st.button(f"🔒 Isolate", key=f"isolate_{asset}"):
+                        sim.execute_defense_action("Isolate Asset", asset, None)
+                        st.success(f"✓ {asset} isolated!")
+                        st.rerun()
+    
+    with tab3:
+        st.markdown("### 🛡️ SECURITY CONTROLS MANAGEMENT")
+        
+        for control_name, control_data in sim.security_controls.items():
+            col1, col2, col3 = st.columns([2, 1, 1])
             
             with col1:
-                st.markdown(f"**Status:** <span class='badge-enterprise {status_badge}'>{app['status']}</span>", unsafe_allow_html=True)
-                st.markdown(f"**Criticality:** <span class='badge-enterprise {criticality_badge}'>{app['criticality']}</span>", unsafe_allow_html=True)
-                st.write(f"**Active Users:** {app['users']}")
+                st.markdown(f"**{control_name}**")
+                st.progress(control_data['effectiveness'], text=f"Effectiveness: {int(control_data['effectiveness'] * 100)}%")
             
             with col2:
-                st.write(f"**Response Time:** {app['response_time_ms']} ms")
-                st.write(f"**Error Rate:** {app['error_rate']}%")
-                st.write(f"**Availability:** {app['availability']}%")
+                status = "🟢 ENABLED" if control_data['enabled'] else "🔴 DISABLED"
+                st.markdown(status)
             
             with col3:
-                st.write(f"**Last Deployment:** {app['last_deployment'].strftime('%Y-%m-%d')}")
-                if st.button(f"📊 View Metrics", key=f"metrics_{app['name']}"):
-                    st.info("Detailed metrics loading...")
-
-def render_network_infra(platform):
-    """Network Infrastructure Dashboard"""
-    st.markdown("### 🌐 Global Network Infrastructure")
-    
-    # Filter
-    filter_type = st.selectbox("Device Type", ["All"] + list(set(dev["type"] for dev in platform.network_devices)))
-    
-    devices = platform.network_devices
-    if filter_type != "All":
-        devices = [dev for dev in devices if dev["type"] == filter_type]
-    
-    st.markdown(f"**Showing {len(devices)} devices**")
-    
-    # Device grid
-    for device in devices[:20]:
-        status_badge = "badge-operational" if device["status"] == "Online" else "badge-high"
-        
-        st.markdown(f"""
-        <div class="infrastructure-card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong style="font-size: 1.1rem;">{device['device_id']}</strong><br>
-                    <span style="color: #94a3b8;">{device['type']} | {device['location']}</span>
-                </div>
-                <div>
-                    <span class='badge-enterprise {status_badge}'>{device['status']}</span>
-                </div>
-            </div>
-            <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
-                <div>
-                    <div style="color: #94a3b8; font-size: 0.8rem;">CPU</div>
-                    <div style="font-size: 1.2rem; font-weight: 600;">{device['cpu_usage']}%</div>
-                </div>
-                <div>
-                    <div style="color: #94a3b8; font-size: 0.8rem;">Memory</div>
-                    <div style="font-size: 1.2rem; font-weight: 600;">{device['memory_usage']}%</div>
-                </div>
-                <div>
-                    <div style="color: #94a3b8; font-size: 0.8rem;">Uptime</div>
-                    <div style="font-size: 1.2rem; font-weight: 600;">{device['uptime_days']}d</div>
-                </div>
-                <div>
-                    <div style="color: #94a3b8; font-size: 0.8rem;">Throughput</div>
-                    <div style="font-size: 1.2rem; font-weight: 600;">{device['throughput_gbps']} Gbps</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-def render_data_ops(platform):
-    """Data Operations Dashboard"""
-    st.markdown("### 📊 Data Pipeline Operations")
-    
-    for pipeline in platform.data_pipelines:
-        status_badge = "badge-operational" if pipeline["status"] == "Running" else "badge-critical"
-        
-        with st.expander(f"**{pipeline['name']}** - {pipeline['source']} → {pipeline['destination']}"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown(f"**Status:** <span class='badge-enterprise {status_badge}'>{pipeline['status']}</span>", unsafe_allow_html=True)
-                st.write(f"**Records Processed:** {pipeline['records_processed']:,}")
-                st.write(f"**Success Rate:** {pipeline['success_rate']}%")
-            
-            with col2:
-                st.write(f"**Last Run:** {pipeline['last_run'].strftime('%Y-%m-%d %H:%M')}")
-                st.write(f"**Avg Duration:** {pipeline['avg_duration_min']} minutes")
-                if st.button(f"▶️ Trigger Run", key=f"run_{pipeline['name']}"):
-                    st.success("Pipeline execution started")
-
-def render_incident_mgmt(platform):
-    """Incident Management Dashboard"""
-    st.markdown("### 🚨 IT Incident Management")
-    
-    if not platform.incidents:
-        st.success("✓ No active incidents - All systems operational")
-        return
-    
-    for inc_id, incident in platform.incidents.items():
-        severity_badge = f"badge-{incident['severity'].lower()}"
-        
-        with st.expander(f"**{inc_id}** - {incident['title']} [{incident['severity']}]"):
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.markdown(f"**Severity:** <span class='badge-enterprise {severity_badge}'>{incident['severity']}</span>", unsafe_allow_html=True)
-                st.write(f"**Status:** {incident['status']}")
-                st.write(f"**Affected Service:** {incident['affected_service']}")
-                st.write(f"**Impact:** {incident['impact']}")
-                st.write(f"**Created:** {incident['created'].strftime('%Y-%m-%d %H:%M:%S')}")
-            
-            with col2:
-                if incident['status'] == 'Open':
-                    if st.button("🔍 Investigate", key=f"inv_{inc_id}"):
-                        platform.incidents[inc_id]['status'] = 'Investigating'
-                        platform.log_audit(f"Investigation started: {inc_id}", "INFO")
+                if control_data['enabled']:
+                    if st.button(f"Disable", key=f"disable_{control_name}"):
+                        sim.security_controls[control_name]['enabled'] = False
+                        sim.log_event(f"Security control disabled: {control_name}", "MEDIUM", "blue")
                         st.rerun()
-                elif incident['status'] == 'Investigating':
-                    if st.button("✓ Resolve", key=f"res_{inc_id}"):
-                        platform.incidents[inc_id]['status'] = 'Resolved'
-                        platform.log_audit(f"Incident resolved: {inc_id}", "SUCCESS")
+                else:
+                    if st.button(f"Enable", key=f"enable_{control_name}"):
+                        sim.execute_defense_action("Enable Security Control", control_name, None)
+                        sim.security_controls[control_name]['enabled'] = True
                         st.rerun()
-
-def render_data_centers(platform):
-    """Data Centers Dashboard"""
-    st.markdown("### 🏢 Global Data Center Operations")
     
-    for dc_id, dc in platform.data_centers.items():
-        uptime_color = "#22c55e" if dc["uptime"] >= 99.95 else "#eab308"
+    with tab4:
+        render_event_log(sim, "blue")
+
+def render_observer_interface(sim):
+    """Observer mode interface"""
+    
+    tab1, tab2, tab3 = st.tabs(["📊 Battle Overview", "🌐 Network Status", "📈 Analytics"])
+    
+    with tab1:
+        st.markdown("### 👁️ CYBER WARFARE OVERVIEW")
         
-        st.markdown(f"""
-        <div class="infrastructure-card">
-            <h3 style="margin: 0; color: #818cf8;">{dc_id}</h3>
-            <p style="color: #94a3b8; margin: 0.5rem 0;">{dc['location']}</p>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
-                <div>
-                    <div style="color: #94a3b8; font-size: 0.85rem;">Capacity</div>
-                    <div style="font-size: 1.5rem; font-weight: 600;">{dc['capacity']}</div>
-                </div>
-                <div>
-                    <div style="color: #94a3b8; font-size: 0.85rem;">Uptime</div>
-                    <div style="font-size: 1.5rem; font-weight: 600; color: {uptime_color};">{dc['uptime']}%</div>
-                </div>
-                <div>
-                    <div style="color: #94a3b8; font-size: 0.85rem;">Status</div>
-                    <div><span class='badge-enterprise badge-operational'>OPERATIONAL</span></div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 🔴 Red Team Status")
+            
+            active_red = len([c for c in sim.active_campaigns.values() if c.status == "Active"])
+            completed_red = len([c for c in sim.active_campaigns.values() if c.status == "Completed"])
+            
+            st.metric("Active Campaigns", active_red)
+            st.metric("Completed Campaigns", completed_red)
+            st.metric("Total Score", sim.red_team_score)
+        
+        with col2:
+            st.markdown("#### 🔵 Blue Team Status")
+            
+            alerts = len(sim.detection_alerts)
+            defenses = len(sim.defense_actions)
+            
+            st.metric("Active Alerts", alerts)
+            st.metric("Defense Actions", defenses)
+            st.metric("Total Score", sim.blue_team_score)
+        
+        st.markdown("---")
+        
+        st.markdown("#### ⚔️ Active Engagements")
+        
+        for campaign_id, campaign in sim.active_campaigns.items():
+            if campaign.status == "Active":
+                col_a, col_b, col_c = st.columns([2, 1, 1])
+                
+                with col_a:
+                    st.markdown(f"**{campaign_id}** - {campaign.attack_type}")
+                
+                with col_b:
+                    detection = "🚨 DETECTED" if campaign.detected else "✅ UNDETECTED"
+                    st.markdown(detection)
+                
+                with col_c:
+                    st.progress(campaign.current_stage / len(campaign.attack_sequence))
+    
+    with tab2:
+        render_network_visualization(sim, "observer")
+    
+    with tab3:
+        render_analytics(sim)
 
-def render_realtime_analytics(platform):
-    """Real-time Analytics Dashboard"""
-    st.markdown("### 📈 Real-time System Analytics")
+def render_network_visualization(sim, team):
+    """Render network topology visualization"""
+    st.markdown("### 🌐 NETWORK TOPOLOGY")
     
-    # Generate fresh metrics
-    platform.generate_metrics()
+    # Create network visualization using plotly
+    G = sim.network.graph
     
-    metrics_df = pd.DataFrame(list(platform.metrics_stream))
-    metrics_df = metrics_df.sort_values('timestamp')
+    # Generate layout
+    pos = nx.spring_layout(G, k=2, iterations=50)
     
-    # Multiple charts
-    col1, col2 = st.columns(2)
+    # Prepare node data
+    node_x = []
+    node_y = []
+    node_color = []
+    node_text = []
+    node_size = []
     
+    for node in G.nodes():
+        x, y = pos[node]
+        node_x.append(x)
+        node_y.append(y)
+        
+        # Color based on compromise status
+        if G.nodes[node].get('compromised', False):
+            node_color.append('#dc2626')  # Red for compromised
+        elif G.nodes[node].get('type') == 'critical':
+            node_color.append('#eab308')  # Yellow for critical
+        elif G.nodes[node].get('type') == 'security':
+            node_color.append('#0ea5e9')  # Blue for security
+        else:
+            node_color.append('#6366f1')  # Purple for normal
+        
+        node_text.append(node)
+        node_size.append(G.nodes[node].get('value', 1) * 5 + 10)
+    
+    # Prepare edge data
+    edge_x = []
+    edge_y = []
+    
+    for edge in G.edges():
+        x0, y0 = pos[edge[0]]
+        x1, y1 = pos[edge[1]]
+        edge_x.extend([x0, x1, None])
+        edge_y.extend([y0, y1, None])
+    
+    # Create figure
+    fig = go.Figure()
+    
+    # Add edges
+    fig.add_trace(go.Scatter(
+        x=edge_x, y=edge_y,
+        mode='lines',
+        line=dict(width=0.5, color='#475569'),
+        hoverinfo='none',
+        showlegend=False
+    ))
+    
+    # Add nodes
+    fig.add_trace(go.Scatter(
+        x=node_x, y=node_y,
+        mode='markers+text',
+        marker=dict(
+            size=node_size,
+            color=node_color,
+            line=dict(width=2, color='#1e293b')
+        ),
+        text=node_text,
+        textposition='top center',
+        textfont=dict(size=8, color='#e0e7ff'),
+        hoverinfo='text',
+        showlegend=False
+    ))
+    
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(15,23,42,0.5)',
+        height=600,
+        showlegend=False,
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Legend
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown("#### System Resource Utilization")
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=metrics_df['timestamp'], y=metrics_df['cpu_cluster'], name='CPU %', fill='tozeroy'))
-        fig.add_trace(go.Scatter(x=metrics_df['timestamp'], y=metrics_df['memory_cluster'], name='Memory %', fill='tozeroy'))
-        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,23,42,0.8)', font_color='#e0e7ff', height=300)
-        st.plotly_chart(fig, use_container_width=True)
-    
+        st.markdown("🔴 **Compromised**")
     with col2:
-        st.markdown("#### Active Sessions & API Traffic")
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=metrics_df['timestamp'], y=metrics_df['active_sessions'], name='Sessions'))
-        fig.add_trace(go.Scatter(x=metrics_df['timestamp'], y=metrics_df['api_requests_per_sec'], name='API Req/s'))
-        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,23,42,0.8)', font_color='#e0e7ff', height=300)
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("🟡 **Critical Asset**")
+    with col3:
+        st.markdown("🔵 **Security Control**")
+    with col4:
+        st.markdown("🟣 **Normal Asset**")
+
+def render_event_log(sim, team):
+    """Render event log"""
+    st.markdown("### 📡 LIVE EVENT STREAM")
+    
+    filter_team = st.selectbox("Filter by Team", ["All", "Red Team", "Blue Team", "System"])
+    
+    log_html = '<div class="live-terminal">'
+    
+    for log in sim.event_log:
+        # Simple filter logic
+        if filter_team == "Red Team" and "RED" not in log and "Attack" not in log:
+            continue
+        if filter_team == "Blue Team" and "BLUE" not in log and "Defense" not in log:
+            continue
+        if filter_team == "System" and "SYSTEM" not in log:
+            continue
+        
+        log_html += f'<div style="margin: 0.3rem 0;">{log}</div>'
+    
+    log_html += '</div>'
+    
+    st.markdown(log_html, unsafe_allow_html=True)
+
+def render_analytics(sim):
+    """Render analytics dashboard"""
+    st.markdown("### 📈 WARFARE ANALYTICS")
+    
+    # Campaign timeline
+    st.markdown("#### Campaign Timeline")
+    
+    campaign_data = []
+    for campaign_id, campaign in sim.active_campaigns.items():
+        campaign_data.append({
+            "Campaign": campaign_id,
+            "Type": campaign.attack_type,
+            "Status": campaign.status,
+            "Score": campaign.score,
+            "Progress": f"{campaign.current_stage}/{len(campaign.attack_sequence)}"
+        })
+    
+    if campaign_data:
+        df = pd.DataFrame(campaign_data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No campaigns launched yet")
+    
+    # Score over time (simulated)
+    st.markdown("#### Score Progression")
+    
+    time_points = list(range(0, 11))
+    red_scores = [0] + [sim.red_team_score * (i/10) + random.randint(-10, 10) for i in range(1, 11)]
+    blue_scores = [0] + [sim.blue_team_score * (i/10) + random.randint(-10, 10) for i in range(1, 11)]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time_points, y=red_scores, name='Red Team', line=dict(color='#dc2626', width=3)))
+    fig.add_trace(go.Scatter(x=time_points, y=blue_scores, name='Blue Team', line=dict(color='#0ea5e9', width=3)))
+    
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(15,23,42,0.8)',
+        font_color='#e0e7ff',
+        height=400,
+        xaxis_title="Time",
+        yaxis_title="Score"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+# === MAIN APP ===
 
 def main():
-    if not st.session_state.enterprise_auth:
-        render_enterprise_login()
+    if not st.session_state.authenticated:
+        render_team_selection()
     else:
-        render_enterprise_dashboard()
+        render_warfare_dashboard()
 
 if __name__ == "__main__":
     main()
