@@ -937,7 +937,386 @@ def enterprise_login():
             </div>
             """, unsafe_allow_html=True)
 
-# [Rest of the functions remain the same with enhanced UI elements...]
+def enterprise_dashboard():
+    """Display enterprise SOC dashboard"""
+    platform = st.session_state.soc_platform
+    user = st.session_state.user
+    
+    # Enhanced Enterprise Header
+    st.markdown(f"""
+    <div style='
+        background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 100%); 
+        padding: 25px; 
+        border-bottom: 3px solid #00ff00;
+        margin-bottom: 25px;
+        border-radius: 0 0 15px 15px;
+    '>
+        <div style='display: flex; justify-content: space-between; align-items: center;'>
+            <div>
+                <h1 style='color: #00ff00; margin: 0; font-size: 2.5em; text-shadow: 0 0 10px #00ff00;'>
+                    🛡️ ENTERPRISE SOC PLATFORM v4.0
+                </h1>
+                <p style='color: #00ff00; margin: 8px 0; font-size: 1.1em;'>
+                    OPERATOR: {user.get('first_name', '')} {user.get('last_name', '')} {user.get('avatar', '')} | 
+                    ROLE: {user.get('role', '')} | 
+                    DEPT: {user.get('department', 'N/A')} |
+                    SHIFT: {user.get('shift', 'N/A')}
+                </p>
+            </div>
+            <div style='text-align: right;'>
+                <p style='color: #00ff00; margin: 5px 0; font-size: 1em;'>ENTERPRISE ID: {platform.deployment_id}</p>
+                <p style='color: #00ff00; margin: 5px 0; font-size: 1em;'>{datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+                <p style='color: #00ff00; margin: 5px 0; font-size: 1em;'>UPTIME: {platform.get_system_uptime()}</p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Enhanced Enterprise Sidebar
+    with st.sidebar:
+        st.markdown("### ⚡ ENTERPRISE ACTIONS", unsafe_allow_html=True)
+        
+        if st.button("🔄 REFRESH ENTERPRISE DATA", use_container_width=True, key="refresh_enterprise"):
+            platform.generate_enterprise_data()
+            platform.last_update = datetime.now()
+            st.rerun()
+        
+        if st.button("🚨 SIMULATE ENTERPRISE INCIDENT", use_container_width=True, key="sim_incident"):
+            incident_types = ["Data Breach", "Ransomware Attack", "DDoS Attack", "Insider Threat"]
+            incident_type = random.choice(incident_types)
+            platform.log_security_event(
+                event_type="INCIDENT_SIMULATION",
+                severity="CRITICAL",
+                message=f"Enterprise incident simulation: {incident_type}",
+                user=user.get('user_id', 'unknown')
+            )
+            st.success(f"🎯 Enterprise incident simulated: {incident_type}")
+            time.sleep(1)
+            st.rerun()
+        
+        if st.button("📊 GENERATE EXECUTIVE REPORT", use_container_width=True, key="exec_report"):
+            st.info("📈 Executive security report generated and sent to leadership")
+        
+        if st.button("🔍 RUN ENTERPRISE SCAN", use_container_width=True, key="enterprise_scan"):
+            st.info("🔍 Enterprise-wide security assessment initiated")
+        
+        st.markdown("---")
+        st.markdown("### 🎮 ENTERPRISE MODULES", unsafe_allow_html=True)
+        
+        module = st.radio("SELECT ENTERPRISE MODULE", [
+            "📊 ENTERPRISE DASHBOARD", 
+            "🌐 NETWORK OPERATIONS CENTER", 
+            "💻 ENDPOINT SECURITY", 
+            "🕵️ THREAT INTELLIGENCE", 
+            "🔍 DIGITAL FORENSICS", 
+            "🚨 INCIDENT COMMAND",
+            "📈 RISK & COMPLIANCE", 
+            "☁️ CLOUD SECURITY",
+            "🔧 ASSET MANAGEMENT",
+            "📋 VULNERABILITY MANAGEMENT"
+        ], key="enterprise_module")
+        
+        st.markdown("---")
+        st.markdown("### 🔔 ENTERPRISE ALERTS", unsafe_allow_html=True)
+        
+        # Show recent enterprise alerts
+        recent_alerts = platform.alert_history[-5:] if platform.alert_history else []
+        for alert in recent_alerts:
+            severity_color = {
+                "CRITICAL": "#ff0000",
+                "HIGH": "#ff6600", 
+                "MEDIUM": "#ffff00",
+                "LOW": "#00ff00",
+                "INFO": "#00ffff"
+            }.get(alert.get("severity", "INFO"), "#00ffff")
+            
+            timestamp = alert.get("timestamp", datetime.now())
+            if isinstance(timestamp, datetime):
+                time_str = timestamp.strftime('%H:%M:%S')
+            else:
+                time_str = "Unknown"
+            
+            st.markdown(f"""
+            <div style='
+                background: #1a1a1a; 
+                padding: 10px; 
+                margin: 8px 0; 
+                border-left: 4px solid {severity_color};
+                border-radius: 8px;
+                font-size: 0.85em;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            '>
+                <strong style='color: {severity_color};'>{alert.get('type', 'Alert')}</strong><br>
+                {alert.get('message', 'No message')}<br>
+                <small style='color: #888;'>{time_str}</small>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        if st.button("🚪 SECURE LOGOUT", use_container_width=True, type="primary"):
+            platform.log_security_event(
+                event_type="USER_LOGOUT",
+                severity="INFO",
+                message=f"User {user.get('user_id', 'unknown')} logged out from enterprise SOC platform",
+                user=user.get('user_id', 'unknown')
+            )
+            st.session_state.logged_in = False
+            st.session_state.user = None
+            st.rerun()
+    
+    # Route to selected enterprise module
+    if "ENTERPRISE DASHBOARD" in module:
+        show_enterprise_dashboard(platform)
+    elif "NETWORK OPERATIONS" in module:
+        show_network_operations(platform)
+    elif "ENDPOINT SECURITY" in module:
+        show_endpoint_security(platform)
+    elif "THREAT INTELLIGENCE" in module:
+        show_threat_intelligence(platform)
+    elif "DIGITAL FORENSICS" in module:
+        show_digital_forensics(platform)
+    elif "INCIDENT COMMAND" in module:
+        show_incident_command(platform)
+    elif "RISK & COMPLIANCE" in module:
+        show_risk_compliance(platform)
+    elif "CLOUD SECURITY" in module:
+        show_cloud_security(platform)
+    elif "ASSET MANAGEMENT" in module:
+        show_asset_management(platform)
+    elif "VULNERABILITY MANAGEMENT" in module:
+        show_vulnerability_management(platform)
+
+def show_enterprise_dashboard(platform):
+    """Display enterprise SOC dashboard"""
+    
+    # Enhanced Enterprise Risk Score
+    risk_level, risk_color, risk_score = platform.calculate_enterprise_risk_score()
+    st.markdown(f"""
+    <div class="enterprise-panel" style='text-align: center; background: linear-gradient(135deg, #1a1a1a, #2a2a2a);'>
+        <h1 style='color: {risk_color}; margin: 0; font-size: 2.5em; text-shadow: 0 0 10px {risk_color};'>ENTERPRISE RISK LEVEL: {risk_level}</h1>
+        <h2 style='color: {risk_color}; margin: 15px 0; font-size: 3em;'>{risk_score}/100</h2>
+        <div class='progress-enterprise' style='margin: 0 auto; width: 80%; height: 20px;'>
+            <div class='progress-enterprise-bar' style='width: {risk_score}%; background: {risk_color};'></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Enhanced Enterprise Metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        critical_threats = len([t for t in platform.live_threats if t.get("severity") == "Critical"])
+        st.markdown(f"""
+        <div class="critical-panel" style='text-align: center;'>
+            <h1 style='color: #ff0000; font-size: 3em; text-shadow: 0 0 10px #ff0000;'>{critical_threats}</h1>
+            <p style='font-size: 1.1em; font-weight: bold;'>CRITICAL THREATS</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        active_incidents = len([t for t in platform.live_threats if t.get("status") == "Active"])
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center; border-left: 4px solid #ff6600;'>
+            <h1 style='color: #ff6600; font-size: 3em;'>{active_incidents}</h1>
+            <p style='font-size: 1.1em; font-weight: bold;'>ACTIVE INCIDENTS</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        endpoints_at_risk = len([e for e in platform.endpoint_telemetry if e.get("risk_score", 0) > 70])
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center; border-left: 4px solid #ffff00;'>
+            <h1 style='color: #ffff00; font-size: 3em;'>{endpoints_at_risk}</h1>
+            <p style='font-size: 1.1em; font-weight: bold;'>ENDPOINTS AT RISK</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        vulnerabilities = sum([asset.get("vulnerabilities", 0) for asset in platform.cloud_assets + platform.iot_devices])
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center; border-left: 4px solid #ff4444;'>
+            <h1 style='color: #ff4444; font-size: 3em;'>{vulnerabilities}</h1>
+            <p style='font-size: 1.1em; font-weight: bold;'>OPEN VULNERABILITIES</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Enhanced System Health and Real-time Monitoring
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🏥 ENTERPRISE SYSTEM HEALTH")
+        
+        for system, health in platform.system_health.items():
+            status_color = "#00ff00" if health.get("status") == "online" else "#ff0000"
+            perf_color = "#00ff00" if health.get("performance", 0) > 90 else "#ffff00" if health.get("performance", 0) > 70 else "#ff0000"
+            
+            st.markdown(f"""
+            <div class="enterprise-panel">
+                <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;'>
+                    <div style='display: flex; align-items: center;'>
+                        <span class='status-indicator status-online'></span>
+                        <strong style='font-size: 1.1em;'>{system.replace('_', ' ').title()}</strong>
+                    </div>
+                    <div style='text-align: right;'>
+                        <span style='color: {perf_color}; font-weight: bold; font-size: 1.1em;'>{health.get('performance', 0)}%</span>
+                    </div>
+                </div>
+                <div class='progress-enterprise'>
+                    <div class='progress-enterprise-bar' style='width: {health.get("performance", 0)}%; background: {perf_color};'></div>
+                </div>
+                <div style='display: flex; justify-content: space-between; font-size: 0.9em; color: #888; margin-top: 5px;'>
+                    <span>Status: <span style='color: {status_color};'>{health.get('status', 'unknown')}</span></span>
+                    <span>Latency: {health.get('latency', 'N/A')}ms</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### 📡 REAL-TIME THREAT FEED")
+        
+        # Show recent threats
+        recent_threats = sorted(platform.live_threats, key=lambda x: x.get("last_activity", datetime.now()), reverse=True)[:8]
+        
+        for threat in recent_threats:
+            severity = threat.get("severity", "Low")
+            severity_color = {
+                "Critical": "#ff0000",
+                "High": "#ff6600", 
+                "Medium": "#ffff00",
+                "Low": "#00ff00"
+            }.get(severity, "#00ff00")
+            
+            last_activity = threat.get("last_activity", datetime.now())
+            threat_type = threat.get("type", "Unknown")
+            source_country = threat.get("source_country", "Unknown")
+            
+            st.markdown(f"""
+            <div class="log-entry">
+                <span style='color: {severity_color}; font-weight: bold;'>[{last_activity.strftime('%H:%M:%S')}]</span>
+                <strong>{threat_type}</strong> | Source: {source_country} | Confidence: {threat.get('confidence', 0)}%
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Enhanced Compliance and Risk Overview
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 📋 COMPLIANCE OVERVIEW")
+        
+        for framework, data in platform.compliance_data.items():
+            status_color = "#00ff00" if data.get("status") == "Compliant" else "#ffff00" if data.get("status") == "Partially Compliant" else "#ff0000"
+            
+            st.markdown(f"""
+            <div class="enterprise-panel">
+                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                    <strong style='font-size: 1.1em;'>{framework}</strong>
+                    <span style='color: {status_color}; font-weight: bold;'>{data.get('status', 'Unknown')}</span>
+                </div>
+                <div style='display: flex; justify-content: space-between; font-size: 0.95em; margin: 8px 0;'>
+                    <span>Score: {data.get('score', 0)}%</span>
+                    <span>Controls: {data.get('controls_implemented', 0)}/{data.get('controls_total', 0)}</span>
+                </div>
+                <div class='progress-enterprise'>
+                    <div class='progress-enterprise-bar' style='width: {data.get("score", 0)}%; background: {status_color};'></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### ⚠️ ENTERPRISE RISKS")
+        
+        for risk, assessment in platform.risk_assessments.items():
+            likelihood_color = {
+                "High": "#ff0000",
+                "Medium": "#ffff00", 
+                "Low": "#00ff00"
+            }.get(assessment.get("likelihood", "Low"), "#00ff00")
+            
+            impact_color = {
+                "Critical": "#ff0000",
+                "High": "#ff6600",
+                "Medium": "#ffff00",
+                "Low": "#00ff00"
+            }.get(assessment.get("impact", "Low"), "#00ff00")
+            
+            st.markdown(f"""
+            <div class="enterprise-panel">
+                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                    <strong style='font-size: 1.1em;'>{risk}</strong>
+                    <span style='color: {likelihood_color}; font-weight: bold;'>Risk: {assessment.get('risk_score', 0)}</span>
+                </div>
+                <div style='display: flex; justify-content: space-between; font-size: 0.95em; margin: 8px 0;'>
+                    <span>Likelihood: <span style='color: {likelihood_color}; font-weight: bold;'>{assessment.get('likelihood', 'Unknown')}</span></span>
+                    <span>Impact: <span style='color: {impact_color}; font-weight: bold;'>{assessment.get('impact', 'Unknown')}</span></span>
+                </div>
+                <div style='font-size: 0.9em; color: #cccccc; background: #1a1a1a; padding: 8px; border-radius: 4px;'>
+                    Mitigation: {assessment.get('mitigation_status', 'Unknown')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+# Define the missing functions
+def show_network_operations(platform):
+    """Display network operations center"""
+    st.markdown("## 🌐 NETWORK OPERATIONS CENTER")
+    st.markdown("### Enterprise Network Security Monitoring")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 📊 NETWORK TRAFFIC ANALYTICS")
+        st.info("Network monitoring dashboard - Real-time traffic analysis")
+        
+    with col2:
+        st.markdown("#### 🚨 SECURITY ALERTS")
+        st.info("IDS/IPS alert management and analysis")
+
+def show_endpoint_security(platform):
+    """Display endpoint security dashboard"""
+    st.markdown("## 💻 ENTERPRISE ENDPOINT SECURITY")
+    st.markdown("### Advanced Endpoint Protection & Monitoring")
+    st.info("Endpoint detection and response dashboard")
+
+def show_threat_intelligence(platform):
+    """Display enterprise threat intelligence"""
+    st.markdown("## 🕵️ ENTERPRISE THREAT INTELLIGENCE")
+    st.markdown("### Advanced Threat Analysis & Hunting")
+    st.info("Threat intelligence feeds and analysis")
+
+def show_digital_forensics(platform):
+    """Display digital forensics lab"""
+    st.markdown("## 🔍 ENTERPRISE DIGITAL FORENSICS")
+    st.markdown("### Advanced Forensic Analysis & Investigation")
+    st.info("Digital forensics and incident analysis tools")
+
+def show_incident_command(platform):
+    """Display incident command center"""
+    st.markdown("## 🚨 INCIDENT COMMAND CENTER")
+    st.markdown("### Enterprise Incident Management & Response")
+    st.info("Incident response and management dashboard")
+
+def show_risk_compliance(platform):
+    """Display risk and compliance dashboard"""
+    st.markdown("## 📈 RISK & COMPLIANCE DASHBOARD")
+    st.markdown("### Enterprise Risk Management & Regulatory Compliance")
+    st.info("Risk assessment and compliance monitoring")
+
+def show_cloud_security(platform):
+    """Display cloud security dashboard"""
+    st.markdown("## ☁️ ENTERPRISE CLOUD SECURITY")
+    st.markdown("### Multi-Cloud Security Management")
+    st.info("Cloud security posture management")
+
+def show_asset_management(platform):
+    """Display asset management dashboard"""
+    st.markdown("## 🔧 ENTERPRISE ASSET MANAGEMENT")
+    st.markdown("### Comprehensive Asset Inventory & Security")
+    st.info("Asset inventory and management dashboard")
+
+def show_vulnerability_management(platform):
+    """Display vulnerability management dashboard"""
+    st.markdown("## 📋 ENTERPRISE VULNERABILITY MANAGEMENT")
+    st.markdown("### Vulnerability Assessment & Patch Management")
+    st.info("Vulnerability scanning and patch management")
 
 def main():
     # Initialize enterprise SOC platform in session state
