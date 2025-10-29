@@ -11,11 +11,6 @@ import random
 from typing import Dict, List, Any
 import warnings
 import math
-import requests
-import socket
-import threading
-from collections import deque
-import asyncio
 import uuid
 
 warnings.filterwarnings('ignore')
@@ -186,7 +181,7 @@ class EnterpriseSOCPlatform:
         self.deployment_id = str(uuid.uuid4())[:8]
         self.last_update = datetime.now()
         self.system_start_time = datetime.now()
-        self.alert_history = deque(maxlen=1000)
+        self.alert_history = []
         self.incident_counter = 0
         self.threat_intelligence_feeds = {}
         self.compliance_frameworks = {}
@@ -854,7 +849,7 @@ def enterprise_dashboard():
     platform = st.session_state.soc_platform
     user = st.session_state.user
     
-    # Enterprise Header
+    # Enterprise Header - FIXED: Using .get() to handle missing keys safely
     st.markdown(f"""
     <div style='
         background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 100%); 
@@ -868,10 +863,10 @@ def enterprise_dashboard():
                     🛡️ ENTERPRISE SOC PLATFORM v4.0
                 </h1>
                 <p style='color: #00ff00; margin: 5px 0;'>
-                    OPERATOR: {user['first_name']} {user['last_name']} {user['avatar']} | 
-                    ROLE: {user['role']} | 
-                    DEPT: {user['department']} |
-                    SHIFT: {user['shift']}
+                    OPERATOR: {user.get('first_name', '')} {user.get('last_name', '')} {user.get('avatar', '')} | 
+                    ROLE: {user.get('role', '')} | 
+                    DEPT: {user.get('department', 'N/A')} |
+                    SHIFT: {user.get('shift', 'N/A')}
                 </p>
             </div>
             <div style='text-align: right;'>
@@ -898,7 +893,7 @@ def enterprise_dashboard():
                 event_type="INCIDENT_SIMULATION",
                 severity="CRITICAL",
                 message=f"Enterprise incident simulation: {incident_type}",
-                user=user['user_id']
+                user=user.get('user_id', 'unknown')
             )
             st.success(f"🎯 Enterprise incident simulated: {incident_type}")
             time.sleep(1)
@@ -930,7 +925,7 @@ def enterprise_dashboard():
         st.markdown("### 🔔 ENTERPRISE ALERTS", unsafe_allow_html=True)
         
         # Show recent enterprise alerts
-        recent_alerts = list(platform.alert_history)[-5:] if platform.alert_history else []
+        recent_alerts = platform.alert_history[-5:] if platform.alert_history else []
         for alert in recent_alerts:
             severity_color = {
                 "CRITICAL": "#ff0000",
@@ -939,6 +934,12 @@ def enterprise_dashboard():
                 "LOW": "#00ff00",
                 "INFO": "#00ffff"
             }.get(alert.get("severity", "INFO"), "#00ffff")
+            
+            timestamp = alert.get("timestamp", datetime.now())
+            if isinstance(timestamp, datetime):
+                time_str = timestamp.strftime('%H:%M:%S')
+            else:
+                time_str = "Unknown"
             
             st.markdown(f"""
             <div style='
@@ -951,7 +952,7 @@ def enterprise_dashboard():
             '>
                 <strong>{alert.get('type', 'Alert')}</strong><br>
                 {alert.get('message', 'No message')}<br>
-                <small>{alert.get('timestamp').strftime('%H:%M:%S')}</small>
+                <small>{time_str}</small>
             </div>
             """, unsafe_allow_html=True)
         
@@ -959,8 +960,8 @@ def enterprise_dashboard():
             platform.log_security_event(
                 event_type="USER_LOGOUT",
                 severity="INFO",
-                message=f"User {user['user_id']} logged out from enterprise SOC platform",
-                user=user['user_id']
+                message=f"User {user.get('user_id', 'unknown')} logged out from enterprise SOC platform",
+                user=user.get('user_id', 'unknown')
             )
             st.session_state.logged_in = False
             st.session_state.user = None
@@ -1049,8 +1050,8 @@ def show_enterprise_dashboard(platform):
         st.markdown("### 🏥 ENTERPRISE SYSTEM HEALTH")
         
         for system, health in platform.system_health.items():
-            status_color = "#00ff00" if health["status"] == "online" else "#ff0000"
-            perf_color = "#00ff00" if health["performance"] > 90 else "#ffff00" if health["performance"] > 70 else "#ff0000"
+            status_color = "#00ff00" if health.get("status") == "online" else "#ff0000"
+            perf_color = "#00ff00" if health.get("performance", 0) > 90 else "#ffff00" if health.get("performance", 0) > 70 else "#ff0000"
             
             st.markdown(f"""
             <div class="enterprise-panel">
@@ -1060,11 +1061,11 @@ def show_enterprise_dashboard(platform):
                         <strong>{system.replace('_', ' ').title()}</strong>
                     </div>
                     <div style='text-align: right;'>
-                        <span style='color: {perf_color};'>{health['performance']}%</span>
+                        <span style='color: {perf_color};'>{health.get('performance', 0)}%</span>
                     </div>
                 </div>
                 <div class='progress-enterprise'>
-                    <div class='progress-enterprise-bar' style='width: {health["performance"]}%; background: {perf_color};'></div>
+                    <div class='progress-enterprise-bar' style='width: {health.get("performance", 0)}%; background: {perf_color};'></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1102,20 +1103,20 @@ def show_enterprise_dashboard(platform):
         st.markdown("### 📋 COMPLIANCE OVERVIEW")
         
         for framework, data in platform.compliance_data.items():
-            status_color = "#00ff00" if data["status"] == "Compliant" else "#ffff00" if data["status"] == "Partially Compliant" else "#ff0000"
+            status_color = "#00ff00" if data.get("status") == "Compliant" else "#ffff00" if data.get("status") == "Partially Compliant" else "#ff0000"
             
             st.markdown(f"""
             <div class="enterprise-panel">
                 <div style='display: flex; justify-content: space-between;'>
                     <strong>{framework}</strong>
-                    <span style='color: {status_color};'>{data['status']}</span>
+                    <span style='color: {status_color};'>{data.get('status', 'Unknown')}</span>
                 </div>
                 <div style='display: flex; justify-content: space-between; font-size: 0.9em;'>
-                    <span>Score: {data['score']}%</span>
-                    <span>Controls: {data['controls_implemented']}/{data['controls_total']}</span>
+                    <span>Score: {data.get('score', 0)}%</span>
+                    <span>Controls: {data.get('controls_implemented', 0)}/{data.get('controls_total', 0)}</span>
                 </div>
                 <div class='progress-enterprise'>
-                    <div class='progress-enterprise-bar' style='width: {data["score"]}%; background: {status_color};'></div>
+                    <div class='progress-enterprise-bar' style='width: {data.get("score", 0)}%; background: {status_color};'></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1128,32 +1129,30 @@ def show_enterprise_dashboard(platform):
                 "High": "#ff0000",
                 "Medium": "#ffff00", 
                 "Low": "#00ff00"
-            }.get(assessment["likelihood"], "#00ff00")
+            }.get(assessment.get("likelihood", "Low"), "#00ff00")
             
             impact_color = {
                 "Critical": "#ff0000",
                 "High": "#ff6600",
                 "Medium": "#ffff00",
                 "Low": "#00ff00"
-            }.get(assessment["impact"], "#00ff00")
+            }.get(assessment.get("impact", "Low"), "#00ff00")
             
             st.markdown(f"""
             <div class="enterprise-panel">
                 <div style='display: flex; justify-content: space-between;'>
                     <strong>{risk}</strong>
-                    <span style='color: {likelihood_color};'>Risk: {assessment['risk_score']}</span>
+                    <span style='color: {likelihood_color};'>Risk: {assessment.get('risk_score', 0)}</span>
                 </div>
                 <div style='display: flex; justify-content: space-between; font-size: 0.9em;'>
-                    <span>Likelihood: <span style='color: {likelihood_color};'>{assessment['likelihood']}</span></span>
-                    <span>Impact: <span style='color: {impact_color};'>{assessment['impact']}</span></span>
+                    <span>Likelihood: <span style='color: {likelihood_color};'>{assessment.get('likelihood', 'Unknown')}</span></span>
+                    <span>Impact: <span style='color: {impact_color};'>{assessment.get('impact', 'Unknown')}</span></span>
                 </div>
                 <div style='font-size: 0.8em; color: #cccccc;'>
-                    Mitigation: {assessment['mitigation_status']}
+                    Mitigation: {assessment.get('mitigation_status', 'Unknown')}
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
-# Additional enterprise module implementations would follow the same pattern...
 
 def show_network_operations(platform):
     """Display network operations center"""
@@ -1209,28 +1208,28 @@ def show_threat_intelligence(platform):
     with col1:
         st.markdown("#### 🌍 ADVANCED PERSISTENT THREATS")
         
-        for apt in platform.threat_intel_db["advanced_persistent_threats"]:
-            risk_color = "#ff0000" if apt["attribution_confidence"] in ["Very High", "High"] else "#ff6600"
+        for apt in platform.threat_intel_db.get("advanced_persistent_threats", []):
+            risk_color = "#ff0000" if apt.get("attribution_confidence") in ["Very High", "High"] else "#ff6600"
             
             st.markdown(f"""
             <div class="critical-panel">
-                <strong>{apt['name']}</strong> | <span style='color: {risk_color};'>{apt['country']}</span><br>
-                Targets: {', '.join(apt['targets'][:3])}<br>
-                Confidence: {apt['attribution_confidence']} | Last Seen: {apt['last_observed']}
+                <strong>{apt.get('name', 'Unknown')}</strong> | <span style='color: {risk_color};'>{apt.get('country', 'Unknown')}</span><br>
+                Targets: {', '.join(apt.get('targets', ['Unknown'])[:3])}<br>
+                Confidence: {apt.get('attribution_confidence', 'Unknown')} | Last Seen: {apt.get('last_observed', 'Unknown')}
             </div>
             """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("#### 🦠 MALWARE ANALYSIS")
         
-        for malware in platform.threat_intel_db["malware_families"]:
-            prevalence_color = "#ff0000" if malware["prevalence"] == "High" else "#ffff00"
+        for malware in platform.threat_intel_db.get("malware_families", []):
+            prevalence_color = "#ff0000" if malware.get("prevalence") == "High" else "#ffff00"
             
             st.markdown(f"""
             <div class="enterprise-panel">
-                <strong>{malware['name']}</strong> | Type: {malware['type']}<br>
-                Detection: {malware['detection_rate']}% | Prevalence: <span style='color: {prevalence_color};'>{malware['prevalence']}</span><br>
-                IOCs: {malware['ioc_count']} | First Seen: {malware['first_seen']}
+                <strong>{malware.get('name', 'Unknown')}</strong> | Type: {malware.get('type', 'Unknown')}<br>
+                Detection: {malware.get('detection_rate', 0)}% | Prevalence: <span style='color: {prevalence_color};'>{malware.get('prevalence', 'Unknown')}</span><br>
+                IOCs: {malware.get('ioc_count', 0)} | First Seen: {malware.get('first_seen', 'Unknown')}
             </div>
             """, unsafe_allow_html=True)
 
@@ -1251,7 +1250,7 @@ def show_incident_command(platform):
         severity = incident.get("severity", "Low")
         severity_color = "#ff0000" if severity == "Critical" else "#ff6600"
         
-        with st.expander(f"🚨 {incident['threat_id']} - {incident['type']} - Severity: {severity}"):
+        with st.expander(f"🚨 {incident.get('threat_id', 'Unknown')} - {incident.get('type', 'Unknown')} - Severity: {severity}"):
             col1, col2 = st.columns(2)
             
             with col1:
@@ -1271,16 +1270,16 @@ def show_incident_command(platform):
             # Enterprise response actions
             col3, col4, col5, col6 = st.columns(4)
             with col3:
-                if st.button("🛑 CONTAIN", key=f"contain_{incident['threat_id']}"):
+                if st.button("🛑 CONTAIN", key=f"contain_{incident.get('threat_id', 'unknown')}"):
                     st.success("✓ Enterprise containment procedures initiated")
             with col4:
-                if st.button("🔍 INVESTIGATE", key=f"investigate_{incident['threat_id']}"):
+                if st.button("🔍 INVESTIGATE", key=f"investigate_{incident.get('threat_id', 'unknown')}"):
                     st.info("🔍 Deep forensic investigation launched")
             with col5:
-                if st.button("📋 ESCALATE", key=f"escalate_{incident['threat_id']}"):
+                if st.button("📋 ESCALATE", key=f"escalate_{incident.get('threat_id', 'unknown')}"):
                     st.warning("⚠️ Incident escalated to CISO and executive team")
             with col6:
-                if st.button("📊 REPORT", key=f"report_{incident['threat_id']}"):
+                if st.button("📊 REPORT", key=f"report_{incident.get('threat_id', 'unknown')}"):
                     st.info("📈 Executive incident report generated")
 
 def show_risk_compliance(platform):
@@ -1293,76 +1292,293 @@ def show_risk_compliance(platform):
     with col1:
         st.markdown("#### 🎯 ENTERPRISE RISK ASSESSMENT")
         
-        risks_df = pd.DataFrame([
-            {
+        risks_data = []
+        for risk, assessment in platform.risk_assessments.items():
+            risks_data.append({
                 "Risk": risk,
-                "Score": assessment["risk_score"],
-                "Likelihood": assessment["likelihood"],
-                "Impact": assessment["impact"],
-                "Status": assessment["mitigation_status"]
-            }
-            for risk, assessment in platform.risk_assessments.items()
-        ])
+                "Score": assessment.get("risk_score", 0),
+                "Likelihood": assessment.get("likelihood", "Unknown"),
+                "Impact": assessment.get("impact", "Unknown"),
+                "Status": assessment.get("mitigation_status", "Unknown")
+            })
         
-        # Create risk heatmap
-        fig = px.bar(risks_df, x="Risk", y="Score", color="Score",
-                    title="Enterprise Risk Scores",
-                    color_continuous_scale="reds")
-        fig.update_layout(
-            paper_bgcolor='#0a0a0a',
-            plot_bgcolor='#0a0a0a',
-            font_color='#00ff00'
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        if risks_data:
+            risks_df = pd.DataFrame(risks_data)
+            
+            # Create risk heatmap
+            fig = px.bar(risks_df, x="Risk", y="Score", color="Score",
+                        title="Enterprise Risk Scores",
+                        color_continuous_scale="reds")
+            fig.update_layout(
+                paper_bgcolor='#0a0a0a',
+                plot_bgcolor='#0a0a0a',
+                font_color='#00ff00'
+            )
+            st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         st.markdown("#### 📋 COMPLIANCE FRAMEWORKS")
         
-        compliance_df = pd.DataFrame([
-            {
+        compliance_data = []
+        for framework, data in platform.compliance_data.items():
+            compliance_data.append({
                 "Framework": framework,
-                "Score": data["score"],
-                "Status": data["status"],
-                "Controls": f"{data['controls_implemented']}/{data['controls_total']}"
-            }
-            for framework, data in platform.compliance_data.items()
-        ])
+                "Score": data.get("score", 0),
+                "Status": data.get("status", "Unknown"),
+                "Controls": f"{data.get('controls_implemented', 0)}/{data.get('controls_total', 0)}"
+            })
         
-        fig = px.bar(compliance_df, x="Framework", y="Score", color="Status",
-                    title="Compliance Framework Scores")
-        fig.update_layout(
-            paper_bgcolor='#0a0a0a',
-            plot_bgcolor='#0a0a0a',
-            font_color='#00ff00'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-# Additional enterprise modules would be implemented similarly...
+        if compliance_data:
+            compliance_df = pd.DataFrame(compliance_data)
+            
+            fig = px.bar(compliance_df, x="Framework", y="Score", color="Status",
+                        title="Compliance Framework Scores")
+            fig.update_layout(
+                paper_bgcolor='#0a0a0a',
+                plot_bgcolor='#0a0a0a',
+                font_color='#00ff00'
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 def show_endpoint_security(platform):
     """Display endpoint security dashboard"""
     st.markdown("## 💻 ENTERPRISE ENDPOINT SECURITY")
-    # Implementation similar to other modules...
+    st.markdown("### Advanced Endpoint Protection & Monitoring")
+    
+    # Endpoint risk analysis
+    high_risk = len([e for e in platform.endpoint_telemetry if e.get("risk_score", 0) > 70])
+    medium_risk = len([e for e in platform.endpoint_telemetry if 40 <= e.get("risk_score", 0) <= 70])
+    low_risk = len([e for e in platform.endpoint_telemetry if e.get("risk_score", 0) < 40])
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="critical-panel" style='text-align: center;'>
+            <h1 style='color: #ff0000;'>{high_risk}</h1>
+            <p>HIGH RISK ENDPOINTS</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h1 style='color: #ffff00;'>{medium_risk}</h1>
+            <p>MEDIUM RISK ENDPOINTS</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="security-panel" style='text-align: center;'>
+            <h1 style='color: #00ff00;'>{low_risk}</h1>
+            <p>LOW RISK ENDPOINTS</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Endpoint details
+    st.markdown("#### 🔍 ENDPOINT DETAILS")
+    if st.checkbox("Show High Risk Endpoints"):
+        high_risk_endpoints = [e for e in platform.endpoint_telemetry if e.get("risk_score", 0) > 70]
+        for endpoint in high_risk_endpoints[:5]:
+            with st.expander(f"🚨 {endpoint.get('endpoint_id', 'Unknown')} - Risk: {endpoint.get('risk_score', 0)}"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**OS:** {endpoint.get('os_version', 'Unknown')}")
+                    st.write(f"**AV Status:** {endpoint.get('antivirus_status', 'Unknown')}")
+                    st.write(f"**Threats:** {endpoint.get('threats_detected', 0)}")
+                with col2:
+                    st.write(f"**Patch Level:** {endpoint.get('patch_level', 'Unknown')}")
+                    st.write(f"**Last Scan:** {endpoint.get('last_scan', 'Never')}")
 
 def show_digital_forensics(platform):
     """Display digital forensics lab"""
     st.markdown("## 🔍 ENTERPRISE DIGITAL FORENSICS")
-    # Implementation similar to other modules...
+    st.markdown("### Advanced Forensic Analysis & Investigation")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 🧩 FORENSIC ARTIFACTS")
+        
+        artifacts = [
+            {"type": "Memory Dump", "size": "4.2 GB", "status": "Analyzed", "findings": 3},
+            {"type": "Disk Image", "size": "128 GB", "status": "In Progress", "findings": 12},
+            {"type": "Network Capture", "size": "2.1 GB", "status": "Analyzed", "findings": 8},
+            {"type": "Log Files", "size": "856 MB", "status": "Pending", "findings": 0}
+        ]
+        
+        for artifact in artifacts:
+            status_color = "#00ff00" if artifact["status"] == "Analyzed" else "#ffff00" if artifact["status"] == "In Progress" else "#ff6600"
+            
+            st.markdown(f"""
+            <div class="enterprise-panel">
+                <strong>{artifact['type']}</strong><br>
+                Size: {artifact['size']} | 
+                Status: <span style='color: {status_color};'>{artifact['status']}</span> |
+                Findings: {artifact['findings']}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("#### 🔬 MALWARE ANALYSIS")
+        
+        malware_samples = [
+            {"name": "Trojan.Emotet", "risk": "High", "analysis": "Behavioral analysis completed"},
+            {"name": "Ransomware.Ryuk", "risk": "Critical", "analysis": "Reverse engineering in progress"},
+            {"name": "Backdoor.DarkComet", "risk": "High", "analysis": "Network analysis completed"}
+        ]
+        
+        for malware in malware_samples:
+            risk_color = "#ff0000" if malware["risk"] == "Critical" else "#ff6600"
+            
+            st.markdown(f"""
+            <div class="critical-panel">
+                <strong>{malware['name']}</strong><br>
+                Risk: <span style='color: {risk_color};'>{malware['risk']}</span><br>
+                {malware['analysis']}
+            </div>
+            """, unsafe_allow_html=True)
 
 def show_cloud_security(platform):
     """Display cloud security dashboard"""
     st.markdown("## ☁️ ENTERPRISE CLOUD SECURITY")
-    # Implementation similar to other modules...
+    st.markdown("### Multi-Cloud Security Management")
+    
+    # Cloud asset overview
+    st.markdown("#### 📊 CLOUD ASSET OVERVIEW")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        aws_assets = len([a for a in platform.cloud_assets if a.get("provider") == "AWS"])
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #ff9900;'>{aws_assets}</h3>
+            <p>AWS Assets</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        azure_assets = len([a for a in platform.cloud_assets if a.get("provider") == "Azure"])
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #0078d4;'>{azure_assets}</h3>
+            <p>Azure Assets</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        gcp_assets = len([a for a in platform.cloud_assets if a.get("provider") == "GCP"])
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #4285f4;'>{gcp_assets}</h3>
+            <p>GCP Assets</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Cloud security issues
+    st.markdown("#### 🚨 CLOUD SECURITY ISSUES")
+    
+    misconfigured = [a for a in platform.cloud_assets if a.get("security_status") == "Misconfigured"]
+    for asset in misconfigured[:3]:
+        st.markdown(f"""
+        <div class="critical-panel">
+            <strong>{asset.get('asset_id', 'Unknown')}</strong> - {asset.get('service', 'Unknown')} ({asset.get('provider', 'Unknown')})<br>
+            Issue: Misconfiguration detected in {asset.get('region', 'Unknown')}<br>
+            Compliance: {asset.get('compliance', 'Unknown')}
+        </div>
+        """, unsafe_allow_html=True)
 
 def show_asset_management(platform):
     """Display asset management dashboard"""
     st.markdown("## 🔧 ENTERPRISE ASSET MANAGEMENT")
-    # Implementation similar to other modules...
+    st.markdown("### Comprehensive Asset Inventory & Security")
+    
+    total_assets = len(platform.endpoint_telemetry) + len(platform.iot_devices) + len(platform.cloud_assets)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #00ff00;'>{total_assets}</h3>
+            <p>TOTAL ASSETS</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #00ff00;'>{len(platform.endpoint_telemetry)}</h3>
+            <p>ENDPOINTS</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #00ff00;'>{len(platform.iot_devices)}</h3>
+            <p>IOT DEVICES</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #00ff00;'>{len(platform.cloud_assets)}</h3>
+            <p>CLOUD ASSETS</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 def show_vulnerability_management(platform):
     """Display vulnerability management dashboard"""
     st.markdown("## 📋 ENTERPRISE VULNERABILITY MANAGEMENT")
-    # Implementation similar to other modules...
+    st.markdown("### Vulnerability Assessment & Patch Management")
+    
+    # Vulnerability statistics
+    critical_vulns = len([v for v in platform.threat_intel_db.get("vulnerabilities", []) if v.get("severity") == "Critical"])
+    high_vulns = len([v for v in platform.threat_intel_db.get("vulnerabilities", []) if v.get("severity") == "High"])
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="critical-panel" style='text-align: center;'>
+            <h3 style='color: #ff0000;'>{critical_vulns}</h3>
+            <p>CRITICAL VULNERABILITIES</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #ff6600;'>{high_vulns}</h3>
+            <p>HIGH VULNERABILITIES</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        total_vulns = sum([asset.get("vulnerabilities", 0) for asset in platform.iot_devices])
+        st.markdown(f"""
+        <div class="enterprise-panel" style='text-align: center;'>
+            <h3 style='color: #ffff00;'>{total_vulns}</h3>
+            <p>ASSET VULNERABILITIES</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Critical vulnerabilities
+    st.markdown("#### 🚨 CRITICAL VULNERABILITIES")
+    
+    for vuln in platform.threat_intel_db.get("vulnerabilities", [])[:3]:
+        if vuln.get("severity") == "Critical":
+            st.markdown(f"""
+            <div class="critical-panel">
+                <strong>{vuln.get('cve', 'Unknown')} - {vuln.get('name', 'Unknown')}</strong><br>
+                CVSS: {vuln.get('cvss_score', 'Unknown')} | EPSS: {vuln.get('epss_score', 'Unknown')}<br>
+                Status: {vuln.get('exploitation_status', 'Unknown')} | Known Exploited: {vuln.get('known_exploited', 'Unknown')}
+            </div>
+            """, unsafe_allow_html=True)
 
 def main():
     # Initialize enterprise SOC platform in session state
